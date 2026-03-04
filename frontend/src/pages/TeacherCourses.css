@@ -1,0 +1,221 @@
+.teacher-courses-page {
+  background: #f8fafc;
+  min-height: calc(100vh - 72px);
+}
+
+.teacher-courses-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.teacher-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(14, 116, 144, 0.12);
+  color: #0e7490;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.teacher-courses-metric {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 116, 144, 0.12));
+  border: 1px solid rgba(14, 116, 144, 0.2);
+  border-radius: 16px;
+  padding: 16px 22px;
+  text-align: center;
+  min-width: 180px;
+}
+
+.teacher-courses-metric__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.teacher-courses-metric__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.teacher-courses-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.teacher-courses-form {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.teacher-courses-list {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+  padding: 20px 22px;
+}
+
+.teacher-courses-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.teacher-courses-cards {
+  display: grid;
+  gap: 16px;
+}
+
+.teacher-course-card {
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.6));
+}
+
+.teacher-course-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.teacher-course-card__date {
+  font-size: 12px;
+  color: #64748b;
+  background: rgba(148, 163, 184, 0.15);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.teacher-courses-loading,
+.teacher-courses-empty {
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(226, 232, 240, 0.5);
+  color: #475569;
+  text-align: center;
+}
+
+.teacher-notes-section {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  padding: 24px 26px;
+}
+
+.teacher-notes-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.teacher-notes-course {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.teacher-notes-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.teacher-notes-form {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.teacher-notes-textarea {
+  resize: vertical;
+  min-height: 180px;
+}
+
+.teacher-notes-list {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+  padding: 20px 22px;
+}
+
+.teacher-notes-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.teacher-notes-cards {
+  display: grid;
+  gap: 16px;
+}
+
+.teacher-note-card {
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.6));
+}
+
+.teacher-note-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.teacher-note-card__date {
+  font-size: 12px;
+  color: #64748b;
+  background: rgba(148, 163, 184, 0.15);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.teacher-notes-loading,
+.teacher-notes-empty {
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(226, 232, 240, 0.5);
+  color: #475569;
+  text-align: center;
+}
+
+@media (max-width: 992px) {
+  .teacher-courses-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-courses-metric {
+    width: 100%;
+  }
+
+  .teacher-notes-grid {
+    grid-template-columns: 1fr;
+  }
+}

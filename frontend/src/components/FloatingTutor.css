@@ -1,0 +1,128 @@
+.tutor-widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.tutor-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #22d3ee);
+  color: #fff;
+  font-size: 24px;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  pointer-events: auto;
+}
+
+.tutor-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 16px 30px rgba(34, 211, 238, 0.4);
+}
+
+.tutor-panel {
+  width: min(360px, 90vw);
+  background: var(--card-bg);
+  color: var(--app-text);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  padding: 16px;
+  transform-origin: bottom right;
+  transition: transform 0.25s ease, opacity 0.25s ease, visibility 0.25s ease;
+  pointer-events: auto;
+}
+
+.tutor-panel.closed {
+  opacity: 0;
+  transform: scale(0.8) translateY(12px);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.tutor-panel.open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  visibility: visible;
+}
+
+.tutor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.tutor-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.tutor-list li {
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.tutor-loading {
+  display: grid;
+  gap: 10px;
+}
+
+.tutor-skeleton {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(
+    120deg,
+    rgba(226, 232, 240, 0.4) 30%,
+    rgba(248, 250, 252, 0.9) 45%,
+    rgba(226, 232, 240, 0.4) 60%
+  );
+  background-size: 200% 100%;
+  animation: tutorShimmer 1.3s ease-in-out infinite;
+}
+
+.tutor-empty {
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+@keyframes tutorShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .tutor-widget {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .tutor-button {
+    width: 50px;
+    height: 50px;
+    font-size: 22px;
+  }
+
+  .tutor-panel {
+    width: min(320px, 92vw);
+  }
+}

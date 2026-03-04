@@ -1,0 +1,198 @@
+.quiz-page {
+  min-height: calc(100vh - 72px);
+}
+
+.quiz-page__header {
+  margin-bottom: 1.75rem !important;
+}
+
+.quiz-select-card,
+.quiz-session-card,
+.quiz-result-card {
+  border-radius: var(--radius-xl) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.quiz-select-card .card-body,
+.quiz-session-card .card-body,
+.quiz-result-card .card-body {
+  padding: 1.35rem 1.4rem;
+}
+
+.quiz-select-card .card-title {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: 1.08rem;
+  margin-bottom: 0.45rem;
+}
+
+.quiz-select-card .badge {
+  background: var(--color-primary-light) !important;
+  color: var(--color-primary-dark) !important;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.quiz-select-card .btn {
+  margin-top: 0.9rem !important;
+}
+
+.achievement-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.achievement-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.achievement-modal__card {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 90vw);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+  animation: achievement-pop 0.55s ease;
+}
+
+.achievement-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.achievement-modal__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9333ea;
+  background: #f3e8ff;
+}
+
+.achievement-modal__badges {
+  display: grid;
+  gap: 16px;
+}
+
+.achievement-modal__badge {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.achievement-modal__badge img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes achievement-pop {
+  from {
+    transform: translateY(20px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Quiz option styling - Clear, high contrast */
+.list-group-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.list-group-item:hover {
+  background-color: var(--color-accent-soft);
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.list-group-item.active {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  border-color: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.32);
+}
+
+.list-group-item.active .form-check-input {
+  background-color: #ffffff;
+  border-color: #ffffff;
+  checked: true;
+}
+
+.form-check-input {
+  cursor: pointer;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.form-check-input:checked {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+.form-check-input:checked::after {
+  content: '✓';
+  color: white;
+}
+
+.quiz-session-card .badge,
+.quiz-result-card .badge {
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .quiz-page {
+    padding-top: 0.5rem;
+  }
+
+  .quiz-page__header {
+    margin-bottom: 1.15rem !important;
+  }
+
+  .quiz-select-card .card-body,
+  .quiz-session-card .card-body,
+  .quiz-result-card .card-body {
+    padding: 1.05rem 1rem;
+  }
+
+  .list-group-item {
+    padding: 0.8rem 0.85rem;
+  }
+}

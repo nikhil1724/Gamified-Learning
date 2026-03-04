@@ -1,0 +1,303 @@
+:root {
+  /* Clean Light Theme */
+  --app-bg: #f8fbff;
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+  --card-bg: #ffffff;
+  --card-border: #dbe4f0;
+  --navbar-bg: rgba(255, 255, 255, 0.92);
+  --navbar-text: #1e293b;
+  --accent: #2563eb;
+  --accent-strong: #1e40af;
+  --accent-light: #dbeafe;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --border-color: #dbe4f0;
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.navbar-theme {
+  background: var(--navbar-bg) !important;
+  color: var(--navbar-text);
+  border-bottom: 1px solid rgba(219, 228, 240, 0.95);
+  backdrop-filter: blur(8px);
+  height: 72px;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navbar-theme--scrolled {
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  border-color: rgba(203, 213, 225, 0.9);
+}
+
+.navbar-container {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.navbar-brand {
+  font-weight: 700 !important;
+  letter-spacing: 0.1px;
+  font-size: 1.1rem;
+}
+
+.navbar-primary-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+  width: 100%;
+}
+
+.navbar-primary-wrap .profile-menu {
+  margin-left: auto;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.navbar-primary {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  margin: 0 auto;
+}
+
+.navbar-link {
+  font-weight: 600 !important;
+  font-size: 0.95rem;
+  position: relative;
+  padding: 0.35rem 0;
+  transition: color var(--transition-base);
+  color: var(--navbar-text);
+}
+
+.navbar-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 2.5px;
+  background: var(--accent);
+  border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--transition-base);
+}
+
+.navbar-link:hover::after,
+.navbar-theme .nav-link.active::after {
+  transform: scaleX(1);
+}
+
+.navbar-theme .nav-link.active {
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+}
+
+.navbar-theme .nav-link:hover {
+  color: var(--accent) !important;
+}
+
+.navbar-theme .navbar-brand,
+.navbar-theme .nav-link,
+.navbar-theme .navbar-text {
+  color: var(--navbar-text) !important;
+}
+
+.navbar-theme .navbar-toggler {
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.3rem 0.45rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-theme .navbar-toggler:focus {
+  box-shadow: 0 0 0 3px var(--accent-light) !important;
+}
+
+@media (max-width: 991px) {
+  .navbar-container {
+    align-items: center;
+  }
+
+  .navbar-theme {
+    height: auto;
+    min-height: 72px;
+  }
+
+  .navbar-theme .navbar-collapse {
+    margin-top: 10px;
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 8px 12px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .navbar-primary-wrap {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0 6px;
+  }
+
+  .navbar-primary-wrap .profile-menu {
+    margin-left: 0;
+  }
+
+  .navbar-actions {
+    width: 100%;
+    margin: 8px 0 0 0;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .navbar-primary {
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .navbar-primary .nav-item,
+  .navbar-primary .nav-link {
+    width: 100%;
+  }
+
+  .navbar-link {
+    padding: 0.5rem 0;
+  }
+
+  .navbar-link::after {
+    bottom: -2px;
+  }
+}
+
+.card,
+.rpg-card,
+.list-group-item,
+.modal-content {
+  background: var(--card-bg) !important;
+  color: var(--app-text);
+  border: 1px solid var(--card-border) !important;
+  box-shadow: var(--shadow-sm);
+  border-radius: 14px;
+}
+
+.card,
+.rpg-card,
+.modal-content {
+  transition: transform var(--transition-base), box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.card:hover,
+.rpg-card:hover {
+  box-shadow: var(--shadow);
+}
+
+.text-muted {
+  color: var(--app-muted) !important;
+}
+
+/* Button Styles */
+.btn-primary {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #ffffff !important;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-radius: 10px !important;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-strong) !important;
+  border-color: var(--accent-strong) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  background-color: var(--app-muted) !important;
+  border-color: var(--app-muted) !important;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-outline-primary {
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  border-radius: 10px !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--accent-light) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-strong) !important;
+}
+
+.btn-success {
+  background-color: var(--success) !important;
+  border-color: var(--success) !important;
+  border-radius: 10px !important;
+}
+
+.btn-success:hover {
+  background-color: #15803d !important;
+  border-color: #15803d !important;
+}
+
+/* Input Styles */
+.form-control,
+.form-select {
+  border-color: var(--card-border) !important;
+  color: var(--app-text) !important;
+  border-radius: 10px !important;
+  min-height: 42px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-light) !important;
+}
+
+.form-control::placeholder {
+  color: var(--app-muted);
+}
+
+/* Remove theme selection UI */
+.theme-select,
+.theme-toggle {
+  display: none !important;
+}

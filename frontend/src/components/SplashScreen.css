@@ -1,0 +1,15 @@
+.splash-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #e7f1ff, #f8f9fa 60%);
+}
+
+.splash-card {
+  background: #fff;
+  padding: 32px 40px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 18px 40px rgba(13, 110, 253, 0.15);
+}

@@ -1,0 +1,51 @@
+.route-loader {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1400;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.route-loader.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.route-loader__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(2px);
+}
+
+.route-loader__card {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 16px;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  justify-items: center;
+  min-width: 140px;
+}
+
+.route-loader__spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(37, 99, 235, 0.2);
+  border-top-color: #2563eb;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,77 @@
+/**
+ * Reusable Badge Component
+ * Styles for consistent badge/tag usage across the platform
+ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Colors */
+.badge--primary {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.badge--success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge--warning {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.badge--error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge--secondary {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+/* Sizes */
+.badge--sm {
+  padding: var(--spacing-1) var(--spacing-1);
+  font-size: var(--font-size-xs);
+}
+
+.badge--lg {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+}
+
+/* Outline */
+.badge--outline {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+/* Solid */
+.badge--solid {
+  color: #ffffff;
+}
+
+.badge--solid.badge--primary {
+  background: var(--color-primary);
+}
+
+.badge--solid.badge--success {
+  background: var(--color-success);
+}
+
+.badge--solid.badge--error {
+  background: var(--color-error);
+}

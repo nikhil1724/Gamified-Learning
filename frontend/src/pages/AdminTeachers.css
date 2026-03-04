@@ -1,0 +1,87 @@
+.admin-teachers-page {
+  background: #f8fafc;
+  min-height: calc(100vh - 72px);
+}
+
+.admin-teachers-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.admin-stat {
+  background: rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  padding: 16px 22px;
+  text-align: center;
+  min-width: 160px;
+}
+
+.admin-stat__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.admin-stat__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.admin-list {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 20px 22px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.admin-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.admin-card:last-child {
+  border-bottom: none;
+}
+
+.admin-pill {
+  background: rgba(251, 191, 36, 0.2);
+  color: #92400e;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .admin-teachers-hero {
+    padding: 20px 22px;
+  }
+
+  .admin-stat {
+    width: 100%;
+  }
+}
