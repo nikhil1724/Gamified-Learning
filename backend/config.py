@@ -1,15 +1,23 @@
 import os
+from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
+def _normalize_database_url(url: str) -> str:
+    normalized = url.strip()
+    if normalized.startswith("mysql://"):
+        normalized = normalized.replace("mysql://", "mysql+pymysql://", 1)
+    return normalized
+
+
 def _build_database_uri() -> str:
     """Prefer DATABASE_URL for deployment platforms; fallback to DB_* vars for local use."""
     direct_url = os.getenv("DATABASE_URL", "").strip()
     if direct_url:
-        return direct_url
+        return _normalize_database_url(direct_url)
 
     db_user = os.getenv("DB_USER", "").strip()
     db_password = os.getenv("DB_PASSWORD", "").strip()
@@ -18,9 +26,11 @@ def _build_database_uri() -> str:
     db_name = os.getenv("DB_NAME", "").strip()
 
     if all([db_user, db_password, db_host, db_port, db_name]):
+        safe_user = quote_plus(db_user)
+        safe_password = quote_plus(db_password)
         return (
             "mysql+pymysql://"
-            f"{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            f"{safe_user}:{safe_password}@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
         )
 
     raise RuntimeError(
@@ -42,6 +52,11 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
     SQLALCHEMY_DATABASE_URI = _build_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "280")),
+        "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
+    }
     JSON_SORT_KEYS = False
     CORS_ORIGINS = _parse_cors_origins(os.getenv("CORS_ORIGINS", "http://localhost:3000"))
     JWT_SECRET_KEY = os.getenv(
@@ -79,3 +94,6 @@ class Config:
     # Legacy user migration settings
     AUTO_VERIFY_LEGACY_USERS = os.getenv("AUTO_VERIFY_LEGACY_USERS", "false").lower() == "true"
     LEGACY_VERIFICATION_CUTOFF = os.getenv("LEGACY_VERIFICATION_CUTOFF", "")
+
+    # Disable startup DB mutations in production by default.
+    RUN_STARTUP_TASKS = os.getenv("RUN_STARTUP_TASKS", "false").lower() == "true"

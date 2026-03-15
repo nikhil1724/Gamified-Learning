@@ -118,9 +118,10 @@ def create_app() -> Flask:
     JWTManager(app)
 
     with app.app_context():
-        # Temporary bootstrap to create tables on first run; remove after migration.
-        db.create_all()
-        seed_quiz_data()
+        if app.config.get("RUN_STARTUP_TASKS"):
+            # Optional bootstrap for local/dev only.
+            db.create_all()
+            seed_quiz_data()
         _auto_verify_legacy_users(app)
 
     app.register_blueprint(auth_bp)
