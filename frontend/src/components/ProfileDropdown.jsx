@@ -20,15 +20,20 @@ const ProfileDropdown = ({ user, role, onLogout }) => {
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
   const secondaryLinks = useMemo(() => {
-    if (role !== "student") {
-      return [];
+    if (role === "student") {
+      return [
+        { label: "Quiz", path: "/quiz" },
+        { label: "Skill Tree", path: "/skills" },
+        { label: "Leaderboard", path: "/leaderboard" },
+        { label: "Rewards", path: "/rewards" },
+      ];
     }
-    return [
-      { label: "Quiz", path: "/quiz" },
-      { label: "Skill Tree", path: "/skills" },
-      { label: "Leaderboard", path: "/leaderboard" },
-      { label: "Rewards", path: "/rewards" },
-    ];
+
+    if (role === "teacher") {
+      return [{ label: "Analytics Hub", path: "/teacher/courses" }];
+    }
+
+    return [];
   }, [role]);
 
   const initials = useMemo(() => {

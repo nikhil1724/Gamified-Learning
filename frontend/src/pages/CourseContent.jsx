@@ -44,10 +44,18 @@ const CourseContent = () => {
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const response = await api.get(`/courses/${courseId}/progress`);
+        const rawUser = localStorage.getItem("user");
+        const currentUser = rawUser ? JSON.parse(rawUser) : null;
+        const userId = Number(currentUser?.id);
+        if (!userId) {
+          setProgress({ total: 0, completed: 0 });
+          return;
+        }
+
+        const response = await api.get(`/progress/${userId}/${courseId}`);
         setProgress({
           total: response.data?.total_lessons ?? 0,
-          completed: response.data?.completed_count ?? 0,
+          completed: response.data?.completed_lessons ?? 0,
         });
       } catch {
         setProgress({ total: 0, completed: 0 });
@@ -125,11 +133,42 @@ const CourseContent = () => {
               {notes.map((note) => (
                 <article className="course-note-card" key={note.id}>
                   <div className="course-note-card__header">
-                    <h4 className="mb-1">{note.title}</h4>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {note.lesson_number != null ? (
+                        <span className="lesson-week-badge">Week {note.lesson_number}</span>
+                      ) : null}
+                      <h4 className="mb-0">{note.title}</h4>
+                    </div>
                     <span className="course-note-card__date">
                       {new Date(note.created_at).toLocaleDateString()}
                     </span>
                   </div>
+                  {note.topic ? <div className="lesson-card-topic">📌 {note.topic}</div> : null}
+                  <div className="lesson-card-meta">
+                    {note.difficulty ? (
+                      <span
+                        className={`lesson-difficulty-badge lesson-difficulty-badge--${note.difficulty.toLowerCase()}`}
+                      >
+                        {note.difficulty}
+                      </span>
+                    ) : null}
+                    {note.duration ? (
+                      <span className="lesson-duration-badge">⏱ {note.duration} min</span>
+                    ) : null}
+                  </div>
+                  {note.objectives ? (
+                    <div className="course-note-card__body">
+                      <strong>Learning Objectives</strong>
+                      <p className="mb-0 mt-1">{note.objectives}</p>
+                    </div>
+                  ) : null}
                   {note.content ? (
                     <div className="course-note-card__body">{note.content}</div>
                   ) : (
@@ -137,16 +176,28 @@ const CourseContent = () => {
                       No written notes provided.
                     </div>
                   )}
-                  {note.file_url ? (
-                    <a
-                      className="course-note-card__link"
-                      href={note.file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Download attachment
-                    </a>
-                  ) : null}
+                  <div className="lesson-card-links">
+                    {note.file_url ? (
+                      <a
+                        className="lesson-card-link lesson-card-link--pdf"
+                        href={note.file_url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        📄 View PDF
+                      </a>
+                    ) : null}
+                    {note.video_url ? (
+                      <a
+                        className="lesson-card-link lesson-card-link--video"
+                        href={note.video_url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        🎥 Watch Video
+                      </a>
+                    ) : null}
+                  </div>
                 </article>
               ))}
             </div>

@@ -17,7 +17,7 @@ const CodePlayground = ({ language = 'python', initialCode = '' }) => {
     setOutput('Running code...');
 
     try {
-      const response = await api.post('/api/run', {
+      const response = await api.post('/run', {
         code: code,
         language: language
       });

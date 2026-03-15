@@ -94,6 +94,61 @@
   text-decoration: underline;
 }
 
+  /* ── Lesson shared styles (mirrors TeacherCourses) ── */
+  .lesson-week-badge {
+    font-size: 11px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .lesson-card-topic {
+    font-size: 13px;
+    color: #475569;
+    margin: 6px 0 4px;
+  }
+  .lesson-card-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 6px 0;
+  }
+  .lesson-difficulty-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .lesson-difficulty-badge--beginner    { background: #dcfce7; color: #16a34a; }
+  .lesson-difficulty-badge--intermediate { background: #fef9c3; color: #ca8a04; }
+  .lesson-difficulty-badge--advanced    { background: #fee2e2; color: #dc2626; }
+  .lesson-duration-badge {
+    font-size: 11px;
+    color: #64748b;
+    background: rgba(148, 163, 184, 0.15);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .lesson-card-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .lesson-card-link {
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 5px 14px;
+    border-radius: 8px;
+    transition: opacity 0.15s;
+  }
+  .lesson-card-link:hover          { opacity: 0.8; }
+  .lesson-card-link--pdf           { background: #eff6ff; color: #2563eb; }
+  .lesson-card-link--video         { background: #fef2f2; color: #dc2626; }
+
 .course-content-empty {
   padding: 20px;
   border-radius: 16px;

@@ -1,7 +1,9 @@
 import logging
 import os
+from datetime import datetime
 
 import click
+from werkzeug.exceptions import HTTPException
 from werkzeug.security import generate_password_hash
 
 from flask import Flask, jsonify, send_from_directory
@@ -26,8 +28,62 @@ from routes.coding_admin_routes import coding_admin_bp
 from routes.lesson_progress_routes import lesson_progress_bp
 from routes.notification_routes import notification_bp
 from routes.analytics_routes import analytics_bp
+from routes.teacher_analytics_routes import teacher_analytics_bp
+from routes.activity_routes import activity_bp
 from seed_data import seed_quiz_data
 from models import User
+
+
+def _auto_verify_legacy_users(app: Flask) -> None:
+    if not app.config.get("AUTO_VERIFY_LEGACY_USERS"):
+        return
+
+    cutoff_raw = (app.config.get("LEGACY_VERIFICATION_CUTOFF") or "").strip()
+    if not cutoff_raw:
+        app.logger.warning(
+            "AUTO_VERIFY_LEGACY_USERS is enabled but LEGACY_VERIFICATION_CUTOFF is empty. Skipping migration."
+        )
+        return
+
+    try:
+        cutoff_dt = datetime.strptime(cutoff_raw, "%Y-%m-%d")
+    except ValueError:
+        app.logger.warning(
+            "Invalid LEGACY_VERIFICATION_CUTOFF format '%s'. Use YYYY-MM-DD.",
+            cutoff_raw,
+        )
+        return
+
+    updated = (
+        User.query.filter(
+            User.email_verified.is_(False),
+            User.created_at < cutoff_dt,
+        )
+        .update(
+            {
+                User.is_verified: True,
+                User.email_verified: True,
+                User.otp_code: None,
+                User.otp_expiry: None,
+                User.verification_token: None,
+                User.verification_token_expiry: None,
+            },
+            synchronize_session=False,
+        )
+    )
+    db.session.commit()
+
+    if updated:
+        app.logger.info(
+            "Legacy auto-verification applied: %s users created before %s were marked verified.",
+            updated,
+            cutoff_raw,
+        )
+    else:
+        app.logger.info(
+            "Legacy auto-verification checked: no matching users before %s.",
+            cutoff_raw,
+        )
 
 
 def create_app() -> Flask:
@@ -45,6 +101,18 @@ def create_app() -> Flask:
 
     CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
 
+    # Ensure uploads directory exists and is writable for notes/document uploads.
+    uploads_dir = app.config.get("UPLOAD_DIR")
+    if uploads_dir:
+        os.makedirs(uploads_dir, exist_ok=True)
+        try:
+            probe_path = os.path.join(uploads_dir, ".write_test")
+            with open(probe_path, "w", encoding="utf-8") as probe:
+                probe.write("ok")
+            os.remove(probe_path)
+        except OSError as exc:
+            raise RuntimeError(f"UPLOAD_DIR is not writable: {uploads_dir}") from exc
+
     # Initialize SQLAlchemy with the Flask app.
     init_db(app)
     JWTManager(app)
@@ -53,6 +121,7 @@ def create_app() -> Flask:
         # Temporary bootstrap to create tables on first run; remove after migration.
         db.create_all()
         seed_quiz_data()
+        _auto_verify_legacy_users(app)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
@@ -70,6 +139,8 @@ def create_app() -> Flask:
     app.register_blueprint(lesson_progress_bp)
     app.register_blueprint(notification_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(teacher_analytics_bp)
+    app.register_blueprint(activity_bp)
 
     @app.get("/")
     def root_route():
@@ -86,12 +157,33 @@ def create_app() -> Flask:
         if (os.path.exists(os.path.join(frontend_build, "index.html"))
                 and not str(error).startswith("404 Not Found: /api/")):
             return send_from_directory(frontend_build, "index.html")
-        return jsonify({"error": "Not found"}), 404
+        return jsonify({"success": False, "message": "Not found"}), 404
+
+    @app.errorhandler(400)
+    def bad_request(_error):
+        return jsonify({"success": False, "message": "Bad request"}), 400
+
+    @app.errorhandler(401)
+    def unauthorized(_error):
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    @app.errorhandler(403)
+    def forbidden(_error):
+        return jsonify({"success": False, "message": "Forbidden"}), 403
 
     @app.errorhandler(500)
     def server_error(error):
         app.logger.exception("Server error: %s", error)
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"success": False, "message": "Internal server error"}), 500
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_exception(error):
+        if isinstance(error, HTTPException):
+            message = getattr(error, "description", "Request failed")
+            return jsonify({"success": False, "message": message}), error.code
+
+        app.logger.exception("Unhandled exception: %s", error)
+        return jsonify({"success": False, "message": "Internal server error"}), 500
 
     @app.cli.command("create-admin")
     @click.option("--name", default="Admin", help="Admin display name")

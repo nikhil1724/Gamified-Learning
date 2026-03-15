@@ -62,6 +62,15 @@ const Profile = () => {
         { label: "Notes Uploaded", value: statValues.notes_uploaded ?? 0 },
       ];
     }
+    
+    if (profile?.role === "admin") {
+      return [
+        { label: "Total Users", value: statValues.total_users ?? 0 },
+        { label: "Total Courses", value: statValues.total_courses ?? 0 },
+        { label: "Total Problems", value: statValues.total_problems ?? 0 },
+        { label: "Total Enrollments", value: statValues.total_enrollments ?? 0 },
+      ];
+    }
 
     return [
       { label: "Courses Enrolled", value: statValues.courses_enrolled ?? 0 },

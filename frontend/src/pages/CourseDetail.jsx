@@ -32,7 +32,15 @@ const CourseDetail = () => {
           api.get(`/course/${courseId}/lessons`),
           api.get(`/course/${courseId}/quizzes`),
           api.get(`/course/${courseId}/problems`),
-          api.get(`/courses/${courseId}/progress`),
+          (() => {
+            const rawUser = localStorage.getItem("user");
+            const currentUser = rawUser ? JSON.parse(rawUser) : null;
+            const userId = Number(currentUser?.id);
+            if (!userId) {
+              return Promise.resolve({ data: { total_lessons: 0, completed_lessons: 0 } });
+            }
+            return api.get(`/progress/${userId}/${courseId}`);
+          })(),
         ]);
         setCourse(courseResponse.data || null);
         setLessons(lessonsResponse.data || []);
@@ -40,7 +48,7 @@ const CourseDetail = () => {
         setProblems(problemsResponse.data || []);
         setProgress({
           total: progressResponse.data?.total_lessons ?? 0,
-          completed: progressResponse.data?.completed_count ?? 0,
+          completed: progressResponse.data?.completed_lessons ?? 0,
         });
       } catch (err) {
         setError(err?.response?.data?.error || "Failed to load course data.");

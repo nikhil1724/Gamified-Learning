@@ -1,0 +1,103 @@
+.recommendation-panel {
+  margin-bottom: 20px;
+}
+
+.recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.recommendation-signals {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recommendation-signals__label {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.recommendation-topic-chip {
+  font-size: 0.76rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.recommendation-card {
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.08);
+}
+
+.recommendation-card__tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1d4ed8;
+  background: #dbeafe;
+  padding: 4px 8px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.recommendation-card__tag--lesson {
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
+.recommendation-card__title {
+  display: block;
+  color: #0f172a;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 8px;
+}
+
+.recommendation-card__title:hover {
+  color: #1d4ed8;
+}
+
+.recommendation-card__reason {
+  font-size: 0.86rem;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.recommendation-card__details {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.recommendation-card__details summary {
+  cursor: pointer;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.recommendation-card__details div {
+  margin-top: 6px;
+}
+
+.recommendation-card__link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.recommendation-card__link:hover {
+  text-decoration: underline;
+}

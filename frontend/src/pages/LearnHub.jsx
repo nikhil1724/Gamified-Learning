@@ -71,7 +71,7 @@ const LearnHub = () => {
   useEffect(() => {
     const fetchAllProgress = async () => {
       try {
-        const response = await api.get('/api/lesson-progress');
+        const response = await api.get('/lesson-progress');
         // Convert array of progress to object keyed by course
         const progressByCourse = {};
         response.data.progress.forEach(item => {

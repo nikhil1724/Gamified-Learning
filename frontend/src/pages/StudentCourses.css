@@ -71,6 +71,24 @@
   font-size: 14px;
 }
 
+.student-courses-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.student-courses-filters .form-control,
+.student-courses-filters .form-select {
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+
+.student-courses-filters .form-control:focus,
+.student-courses-filters .form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
 .student-courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -121,6 +139,21 @@
 .student-course-card__tag--enrolled {
   background: rgba(16, 185, 129, 0.12);
   color: #0f766e;
+}
+
+.student-course-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.student-course-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .student-courses-empty {
@@ -186,6 +219,10 @@
 
   .student-courses-section {
     padding: 16px;
+  }
+
+  .student-courses-filters {
+    grid-template-columns: 1fr;
   }
 
   .student-courses-grid {

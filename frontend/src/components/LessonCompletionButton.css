@@ -1,0 +1,38 @@
+.lesson-completion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 2px solid #22c55e;
+  background: transparent;
+  color: #22c55e;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, opacity 0.18s;
+  min-width: 180px;
+  justify-content: center;
+}
+
+.lesson-completion-btn:hover:not(:disabled):not(.lesson-completion-btn--done) {
+  background: #22c55e;
+  color: #fff;
+}
+
+.lesson-completion-btn--done {
+  background: #22c55e;
+  color: #fff;
+  border-color: #22c55e;
+  cursor: default;
+}
+
+.lesson-completion-btn:disabled:not(.lesson-completion-btn--done) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.lesson-completion-btn__icon {
+  font-size: 1rem;
+  line-height: 1;
+}

@@ -1,0 +1,57 @@
+.course-progress-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s;
+}
+
+.course-progress-card:hover {
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.1));
+}
+
+.course-progress-card--loading {
+  padding: 20px 18px;
+}
+
+.course-progress-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.course-progress-card__title {
+  font-weight: 600;
+  font-size: 0.97rem;
+  color: var(--color-text, #1e293b);
+  text-decoration: none;
+}
+
+.course-progress-card__title:hover {
+  color: var(--color-primary, #3b82f6);
+  text-decoration: underline;
+}
+
+.course-progress-card__badge {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary-dark, #1d4ed8);
+}
+
+.course-progress-card__badge--done {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.course-progress-card__meta {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--app-muted, #64748b);
+}

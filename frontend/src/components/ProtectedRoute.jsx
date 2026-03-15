@@ -28,16 +28,6 @@ const ProtectedRoute = ({ children, allowedRoles, role: requiredRole }) => {
     );
   }
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("ProtectedRoute:", {
-      isAuthenticated,
-      role,
-      isApproved,
-      effectiveAllowedRoles,
-      authLoading,
-    });
-  }
-
   if (!isAuthenticated) {
     return <Navigate to="/role-select" replace />;
   }

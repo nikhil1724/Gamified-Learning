@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy.orm import joinedload
+import re
 
 from database import db
 from models import CodingProblem, Course, Enrollment, Lesson, Quiz, User
@@ -8,6 +9,47 @@ from routes.notification_routes import create_notification
 
 
 course_bp = Blueprint("courses", __name__, url_prefix="/api")
+
+
+def _extract_course_meta(description: str | None) -> dict:
+    text = description or ""
+    difficulty_match = re.search(r"difficulty\s*:\s*([A-Za-z]+)", text, re.IGNORECASE)
+    category_match = re.search(r"category\s*:\s*([A-Za-z\s]+)", text, re.IGNORECASE)
+
+    difficulty = (difficulty_match.group(1).strip() if difficulty_match else "")
+    category = (category_match.group(1).strip() if category_match else "")
+
+    # Normalize into the filter values requested by frontend.
+    normalized_difficulty = ""
+    if difficulty.lower() in {"beginner", "intermediate", "advanced"}:
+        normalized_difficulty = difficulty.capitalize()
+
+    normalized_category = ""
+    category_lower = category.lower()
+    if "program" in category_lower:
+        normalized_category = "Programming"
+    elif "dsa" in category_lower or "data structure" in category_lower or "algorithm" in category_lower:
+        normalized_category = "DSA"
+    elif "web" in category_lower:
+        normalized_category = "Web"
+
+    return {
+        "difficulty": normalized_difficulty,
+        "category": normalized_category,
+    }
+
+
+def _serialize_course(course: Course) -> dict:
+    meta = _extract_course_meta(course.description)
+    return {
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "teacher_name": course.teacher.name if course.teacher else None,
+        "created_at": course.created_at.isoformat(),
+        "difficulty": meta["difficulty"],
+        "category": meta["category"],
+    }
 
 
 def _get_teacher():
@@ -101,20 +143,30 @@ def list_teacher_courses():
 @course_bp.get("/courses")
 @jwt_required()
 def list_courses():
-    courses = Course.query.options(joinedload(Course.teacher)).all()
+    search = (request.args.get("search") or "").strip()
+    difficulty = (request.args.get("difficulty") or "").strip().lower()
+    category = (request.args.get("category") or "").strip().lower()
 
-    return jsonify(
-        [
-            {
-                "id": course.id,
-                "title": course.title,
-                "description": course.description,
-                "teacher_name": course.teacher.name if course.teacher else None,
-                "created_at": course.created_at.isoformat(),
-            }
-            for course in courses
+    query = Course.query.options(joinedload(Course.teacher))
+    if search:
+        query = query.filter(Course.title.ilike(f"%{search}%"))
+
+    courses = query.order_by(Course.created_at.desc()).all()
+    serialized = [_serialize_course(course) for course in courses]
+
+    if difficulty:
+        serialized = [
+            course for course in serialized
+            if course.get("difficulty", "").lower() == difficulty
         ]
-    )
+
+    if category:
+        serialized = [
+            course for course in serialized
+            if course.get("category", "").lower() == category
+        ]
+
+    return jsonify(serialized)
 
 
 @course_bp.get("/course/<int:course_id>")

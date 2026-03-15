@@ -1,13 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import SplashScreen from "./components/SplashScreen";
 import Dashboard from "./pages/Dashboard";
-import InstructorDashboard from "./pages/InstructorDashboard";
 import Home from "./pages/Home";
 import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
@@ -23,7 +22,6 @@ import CourseList from "./pages/CourseList";
 import CourseDetail from "./pages/CourseDetail";
 import LessonViewer from "./pages/LessonViewer";
 import AdminTeachers from "./pages/AdminTeachers";
-import AdminDashboard from "./pages/AdminDashboard";
 import AdminProblems from "./pages/AdminProblems";
 import AdminCourseContent from "./pages/AdminCourseContent";
 import ProblemsList from "./pages/ProblemsList";
@@ -35,6 +33,17 @@ import LessonPage from "./pages/LessonPage";
 import MyLearningDashboard from "./pages/MyLearningDashboard";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import TeacherStudents from "./pages/TeacherStudents";
+import StudentPerformanceDetail from "./pages/StudentPerformanceDetail";
+import CourseAnalytics from "./pages/CourseAnalytics";
+import InstructorAnalytics from "./pages/InstructorAnalytics";
+import VerifyEmail from "./pages/VerifyEmail";
+import VerifyOTP from "./pages/VerifyOTP";
+import VerifyEmailOTP from "./pages/VerifyEmailOTP";
+import ResendVerification from "./pages/ResendVerification";
+const StudentDashboard = lazy(() => import("./pages/StudentDashboard"));
+const InstructorDashboard = lazy(() => import("./pages/InstructorDashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
 const getRoleHome = (role, isApproved) => {
   if (role === "admin") {
@@ -60,7 +69,8 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
     <>
       <RouteLoader visible={showLoader} />
       <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
+        <Suspense fallback={<SplashScreen />}>
+          <Routes location={location} key={location.pathname}>
         <Route
           path="/"
           element={
@@ -87,6 +97,11 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
         <Route path="/login/admin" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/register/teacher" element={<Register />} />
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/verify-email-otp" element={<VerifyEmailOTP />} />
+        <Route path="/resend-otp" element={<ResendVerification />} />
+        <Route path="/resend-verification" element={<ResendVerification />} />
         <Route
           path="/home"
           element={<Navigate to={getRoleHome(role, isApproved)} replace />}
@@ -112,6 +127,14 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
           }
         />
         <Route
+          path="/student/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/course/:course/lessons"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
@@ -124,14 +147,6 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
           element={
             <ProtectedRoute allowedRoles={["student"]}>
               <LessonPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <Home />
             </ProtectedRoute>
           }
         />
@@ -240,6 +255,38 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
           }
         />
         <Route
+          path="/teacher/students"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <TeacherStudents />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/student/:studentId"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <StudentPerformanceDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/course/:courseId/analytics"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <CourseAnalytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/instructor/analytics/:courseId"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <InstructorAnalytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/quiz"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
@@ -287,7 +334,8 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
             </ProtectedRoute>
           }
         />
-        </Routes>
+          </Routes>
+        </Suspense>
       </AnimatePresence>
     </>
   );

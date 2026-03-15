@@ -12,6 +12,14 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default="student", nullable=False)
     is_approved = db.Column(db.Boolean, default=False, nullable=False)
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
+    otp_code = db.Column(db.String(10), nullable=True)
+    otp_expiry = db.Column(db.DateTime, nullable=True)
+    otp_resend_count = db.Column(db.Integer, default=0, nullable=False)
+    otp_resend_window_start = db.Column(db.DateTime, nullable=True)
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    verification_token = db.Column(db.String(255), nullable=True)
+    verification_token_expiry = db.Column(db.DateTime, nullable=True)
     level = db.Column(db.Integer, default=1, nullable=False)
     xp_points = db.Column(db.Integer, default=0, nullable=False)
     coins = db.Column(db.Integer, default=0, nullable=False)
@@ -58,6 +66,11 @@ class User(db.Model):
     )
     notifications = db.relationship(
         "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    learning_activities = db.relationship(
+        "LearningActivity",
         back_populates="user",
         cascade="all, delete-orphan",
     )
@@ -124,6 +137,23 @@ class Progress(db.Model):
         return (
             f"<Progress id={self.id} user_id={self.user_id} "
             f"quiz_id={self.quiz_id} score={self.score}>"
+        )
+
+
+class QuizAttempt(db.Model):
+    __tablename__ = "quiz_attempts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey("quizzes.id"), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    total_questions = db.Column(db.Integer, nullable=False)
+    attempted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return (
+            f"<QuizAttempt id={self.id} user_id={self.user_id} "
+            f"quiz_id={self.quiz_id} score={self.score} total={self.total_questions}>"
         )
 
 
@@ -200,16 +230,16 @@ class Enrollment(db.Model):
 
 class Note(db.Model):
     __tablename__ = "notes"
-    __table_args__ = (
-        db.CheckConstraint(
-            "content IS NOT NULL OR file_url IS NOT NULL",
-            name="ck_notes_content_or_file",
-        ),
-    )
 
     id = db.Column(db.Integer, primary_key=True)
     course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     title = db.Column(db.String(255), nullable=False)
+    lesson_number = db.Column(db.Integer, nullable=True)
+    topic = db.Column(db.String(255), nullable=True)
+    objectives = db.Column(db.Text, nullable=True)
+    duration = db.Column(db.Integer, nullable=True)          # minutes
+    difficulty = db.Column(db.String(20), nullable=True)     # Beginner / Intermediate / Advanced
+    video_url = db.Column(db.String(1024), nullable=True)
     content = db.Column(db.Text, nullable=True)
     file_url = db.Column(db.String(1024), nullable=True)
     uploaded_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -380,7 +410,7 @@ class CodeSubmission(db.Model):
 
 
 class ProblemProgress(db.Model):
-    __tablename__ = "user_progress"
+    __tablename__ = "problem_progress"
     __table_args__ = (
         db.UniqueConstraint("user_id", "problem_id", name="uq_progress_user_problem"),
     )
@@ -494,20 +524,22 @@ class CodingProblem(db.Model):
 
 
 class LessonProgress(db.Model):
-    __tablename__ = "lesson_progress"
+    __tablename__ = "user_progress"
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    course = db.Column(db.String(50), nullable=False)
-    lesson_id = db.Column(db.Integer, nullable=False)
-    completed = db.Column(db.Boolean, default=False, nullable=False)
-    completed_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
+    lesson_id = db.Column(db.Integer, db.ForeignKey("lessons.id"), nullable=False)
+    completed = db.Column(db.Boolean, default=True, nullable=False)
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     user = db.relationship("User", back_populates="lesson_progress")
 
     def __repr__(self):
-        return f"<LessonProgress user_id={self.user_id} course={self.course} lesson={self.lesson_id}>"
+        return (
+            f"<LessonProgress user_id={self.user_id} "
+            f"course_id={self.course_id} lesson_id={self.lesson_id}>"
+        )
 
 
 class Notification(db.Model):
@@ -530,3 +562,20 @@ class Notification(db.Model):
 
     def __repr__(self):
         return f"<Notification id={self.id} user_id={self.user_id} type={self.type} is_read={self.is_read}>"
+
+
+class LearningActivity(db.Model):
+    __tablename__ = "learning_activity"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "activity_date", name="uq_learning_activity_user_date"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    activity_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship("User", back_populates="learning_activities")
+
+    def __repr__(self):
+        return f"<LearningActivity id={self.id} user_id={self.user_id} date={self.activity_date}>"

@@ -1,6 +1,6 @@
 .auth-page {
   display: grid;
-  grid-template-columns: 45% 55%;
+  grid-template-columns: 1fr;
   min-height: 100vh;
   background: var(--color-surface, #ffffff);
 }
@@ -103,14 +103,7 @@
 }
 
 .auth-sidebar {
-  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #172554 100%);
-  color: #ffffff;
-  padding: 48px 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  position: relative;
-  overflow: hidden;
+  display: none;
 }
 
 .auth-sidebar::before {
@@ -235,6 +228,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  min-height: 100vh;
 }
 
 .auth-page--stacked .auth-form-area {
@@ -243,7 +237,7 @@
 
 .auth-form-container {
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
 }
 
 .auth-page--stacked .auth-form-container {

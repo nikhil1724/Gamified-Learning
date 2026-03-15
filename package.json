@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "demo:progress": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location backend; & ..\\.venv\\Scripts\\python.exe .\\apply_db_migration_student_progress.py; & ..\\.venv\\Scripts\\python.exe .\\seed_student_progress_demo.py\"",
+    "demo:progress:migrate": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location backend; & ..\\.venv\\Scripts\\python.exe .\\apply_db_migration_student_progress.py\"",
+    "demo:progress:seed": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location backend; & ..\\.venv\\Scripts\\python.exe .\\seed_student_progress_demo.py\""
+  },
   "dependencies": {
     "axios": "^1.13.5",
     "bootstrap": "^5.3.8",

@@ -115,10 +115,20 @@ const Navbar = () => {
                         Courses
                       </NavLink>
                     </li>
+                    <li className="nav-item">
+                      <NavLink className="nav-link navbar-link" to="/student/dashboard">
+                        My Progress
+                      </NavLink>
+                    </li>
                   </>
                 )}
               </ul>
               <div className="navbar-actions">
+                {role === "teacher" ? (
+                  <Link to="/teacher/courses" className="btn btn-outline-primary btn-sm d-none d-lg-inline-flex">
+                    Analytics Hub
+                  </Link>
+                ) : null}
                 <NotificationBell />
                 <ProfileDropdown user={user} role={role} onLogout={handleLogout} />
               </div>

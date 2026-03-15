@@ -195,7 +195,139 @@
   background: rgba(148, 163, 184, 0.15);
   padding: 4px 10px;
   border-radius: 999px;
+  white-space: nowrap;
 }
+
+/* ── Lesson form section dividers ── */
+.lesson-form-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+}
+.lesson-form-section::before,
+.lesson-form-section::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(226, 232, 240, 0.9);
+}
+.lesson-form-section__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* ── Two-column row ── */
+.lesson-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 540px) {
+  .lesson-form-row { grid-template-columns: 1fr; }
+}
+
+/* ── Card title row ── */
+.teacher-note-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Week badge ── */
+.lesson-week-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ── Topic line ── */
+.lesson-card-topic {
+  font-size: 13px;
+  color: #475569;
+  margin: 6px 0 4px;
+}
+
+/* ── Meta row ── */
+.lesson-card-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+.lesson-difficulty-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.lesson-difficulty-badge--beginner    { background: #dcfce7; color: #16a34a; }
+.lesson-difficulty-badge--intermediate { background: #fef9c3; color: #ca8a04; }
+.lesson-difficulty-badge--advanced    { background: #fee2e2; color: #dc2626; }
+.lesson-duration-badge {
+  font-size: 11px;
+  color: #64748b;
+  background: rgba(148, 163, 184, 0.15);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* ── Objectives ── */
+.lesson-card-objectives {
+  font-size: 13px;
+  color: #475569;
+  margin: 6px 0 4px;
+  line-height: 1.5;
+}
+
+/* ── Links row ── */
+.lesson-card-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.lesson-card-link {
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 4px 12px;
+  border-radius: 8px;
+  transition: opacity 0.15s;
+}
+.lesson-card-link:hover          { opacity: 0.8; }
+.lesson-card-link--pdf           { background: #eff6ff; color: #2563eb; }
+.lesson-card-link--video         { background: #fef2f2; color: #dc2626; }
+.lesson-card-link--delete {
+  border: 0;
+  background: #fff1f2;
+  color: #be123c;
+  cursor: pointer;
+}
+.lesson-card-link--delete:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* backward-compat */
+.teacher-note-card__pdf-link {
+  display: inline-block;
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.teacher-note-card__pdf-link:hover { text-decoration: underline; }
 
 .teacher-notes-loading,
 .teacher-notes-empty {

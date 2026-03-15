@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import api from "../services/api";
 import PageTransition from "../components/PageTransition";
+import LessonCompletionButton from "../components/LessonCompletionButton";
 import "./LessonViewer.css";
 
 const LessonViewer = () => {
@@ -11,7 +12,6 @@ const LessonViewer = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
-  const [marking, setMarking] = useState(false);
 
   useEffect(() => {
     const fetchLessons = async () => {
@@ -45,18 +45,6 @@ const LessonViewer = () => {
       fetchProgress();
     }
   }, [courseId, lessonId]);
-
-  const handleMarkComplete = async () => {
-    try {
-      setMarking(true);
-      await api.post(`/courses/${courseId}/lessons/${lessonId}/complete`);
-      setIsCompleted(true);
-    } catch {
-      setIsCompleted(false);
-    } finally {
-      setMarking(false);
-    }
-  };
 
   const currentLesson = useMemo(
     () => lessons.find((lesson) => String(lesson.id) === String(lessonId)),
@@ -92,14 +80,13 @@ const LessonViewer = () => {
                   </p>
                 </div>
                 <div className="lesson-viewer-actions">
-                  <button
-                    type="button"
-                    className={`btn ${isCompleted ? "btn-success" : "btn-outline-success"}`}
-                    onClick={handleMarkComplete}
-                    disabled={marking}
-                  >
-                    {isCompleted ? "Completed" : marking ? "Saving..." : "Mark complete"}
-                  </button>
+                  <LessonCompletionButton
+                    key={`${courseId}-${lessonId}`}
+                    courseId={courseId}
+                    lessonId={lessonId}
+                    initialCompleted={isCompleted}
+                    onComplete={() => setIsCompleted(true)}
+                  />
                   <Link className="btn btn-outline-light" to={`/courses/${courseId}`}>
                     Back to course
                   </Link>

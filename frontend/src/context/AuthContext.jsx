@@ -4,8 +4,13 @@ const AuthContext = createContext(null);
 
 const getStoredToken = () => localStorage.getItem("token");
 const getStoredUser = () => {
-  const raw = localStorage.getItem("user");
-  return raw ? JSON.parse(raw) : null;
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    localStorage.removeItem("user");
+    return null;
+  }
 };
 
 export const AuthProvider = ({ children }) => {
@@ -32,20 +37,14 @@ export const AuthProvider = ({ children }) => {
 
   // Load token & user from localStorage on mount
   useEffect(() => {
-    console.log("[AuthContext] Mount: Loading from localStorage...");
     const storedToken = getStoredToken();
     const storedUser = getStoredUser();
 
-    console.log("[AuthContext] Stored token:", storedToken ? "exists" : "null");
-    console.log("[AuthContext] Stored user:", storedUser);
-
     if (isTokenValid(storedToken)) {
-      console.log("[AuthContext] Token valid, setting auth state");
       setToken(storedToken);
       setUser(storedUser);
     } else {
-      // Token invalid or expired
-      console.log("[AuthContext] Token invalid or expired, clearing");
+      // Token invalid or expired.
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setToken(null);
@@ -74,10 +73,6 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const login = (accessToken, userInfo) => {
-    console.log("[AuthContext] login() called with:", {
-      token: accessToken ? "exists" : "null",
-      user: userInfo,
-    });
     setToken(accessToken);
     setUser(userInfo || null);
   };

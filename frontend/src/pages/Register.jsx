@@ -21,6 +21,9 @@ const Register = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [verificationOtp, setVerificationOtp] = useState("");
 
   useEffect(() => {
     if (isTeacherRegister) {
@@ -63,14 +66,22 @@ const Register = () => {
 
     try {
       setIsSubmitting(true);
-      await api.post("/register", {
+      const response = await api.post("/register", {
         name: formData.name,
         email: formData.email,
         role: formData.role,
         password: formData.password,
       });
 
-      navigate("/login", { replace: true });
+      // Check if email verification is required
+      if (response.data.email_verification_required) {
+        setRegistrationSuccess(true);
+        setRegisteredEmail(formData.email);
+        setVerificationOtp(response.data.verification_otp || "");
+      } else {
+        // If verification not required, redirect to login
+        navigate("/login", { replace: true });
+      }
     } catch (err) {
       const message = err?.response?.data?.error || "Registration failed.";
       setError(message);
@@ -122,7 +133,47 @@ const Register = () => {
       title="Create Your Account"
       subtitle="Join thousands of focused learners and start mastering new skills"
     >
-      <form onSubmit={handleSubmit} className="register-form">
+      {registrationSuccess ? (
+        <div className="registration-success">
+          <div className="success-icon-large">📧</div>
+          <h3 className="success-title">Check Your Email For OTP!</h3>
+          <p className="success-message">
+            We've sent a 6-digit verification OTP to <strong>{registeredEmail}</strong>
+          </p>
+          <p className="success-instructions">
+            Enter the OTP on the verification screen to activate your account.
+          </p>
+          {verificationOtp ? (
+            <div className="alert alert-warning mt-3">
+              <p className="mb-2">
+                Email service is not configured on this server. Use this OTP:
+              </p>
+              <strong>{verificationOtp}</strong>
+            </div>
+          ) : null}
+          <div className="success-tips">
+            <p className="text-muted small mb-2"><strong>Didn't receive the email?</strong></p>
+            <ul className="text-muted small">
+              <li>Check your spam/junk folder</li>
+              <li>Make sure you entered the correct email</li>
+              <li>Wait a few minutes and check again</li>
+            </ul>
+          </div>
+          <div className="success-actions">
+            <Link to="/verify-otp" state={{ email: registeredEmail, otp: verificationOtp }} className="btn btn-primary">
+              Enter OTP
+            </Link>
+            <Link to="/resend-otp" state={{ email: registeredEmail }} className="btn btn-outline-primary">
+              Resend OTP
+            </Link>
+            <Link to="/login/student" className="btn btn-secondary">
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          <form onSubmit={handleSubmit} className="register-form">
         <div className="form-group">
           <label htmlFor="name" className="form-label">
             Full Name
@@ -261,6 +312,8 @@ const Register = () => {
       <p className="auth-footer mt-4 text-center">
         Already have an account? <Link to="/login" className="fw-semibold">Sign In</Link>
       </p>
+      </>
+      )}
     </AuthLayout>
   );
 };

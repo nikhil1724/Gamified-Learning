@@ -115,6 +115,25 @@ A comprehensive digital learning platform that combines education with gamificat
    ```
    Backend will run on `http://localhost:5000`
 
+### Demo Data Shortcut (Student Progress)
+
+From the project root, run:
+
+```bash
+npm run demo:progress
+```
+
+This will:
+- migrate lesson progress schema to the latest `user_progress` format
+- seed demo enrollments, lesson completion rows, and quiz attempts
+
+Useful helper commands:
+
+```bash
+npm run demo:progress:migrate
+npm run demo:progress:seed
+```
+
 ### Frontend Setup
 
 1. **Navigate to frontend directory:**

@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from database import db
+from activity_service import record_learning_activity
 from models import Course, Enrollment, Progress, Question, Quiz, User
 from routes.reward_routes import check_and_unlock_rewards
 from routes.skill_routes import unlock_skills_for_quiz
@@ -161,6 +162,12 @@ def submit_quiz():
     )
     db.session.add(progress)
     db.session.commit()
+
+    try:
+        record_learning_activity(user.id)
+    except Exception:
+        # Avoid breaking quiz submission if streak tracking fails.
+        db.session.rollback()
 
     # Create notification for quiz completion and XP earned
     create_notification(

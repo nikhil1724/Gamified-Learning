@@ -14,6 +14,8 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const getRoleHome = (userRole, approvalState) => {
     if (!userRole) {
@@ -80,6 +82,14 @@ const Login = () => {
     } catch (err) {
       const message = err?.response?.data?.error || "Login failed.";
       setError(message);
+      
+      // Check if email is not verified
+      if (err?.response?.status === 403 && err?.response?.data?.email_verified === false) {
+        setEmailNotVerified(true);
+        setUnverifiedEmail(formData.email);
+      } else {
+        setEmailNotVerified(false);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -137,7 +147,18 @@ const Login = () => {
                 <a href="#">Forgot your password?</a>
               </div>
 
-              {error && <div className="alert alert-danger">{error}</div>}
+              {error && (
+                <div className="alert alert-danger">
+                  {error}
+                  {emailNotVerified && (
+                    <div className="mt-2">
+                      <Link to="/resend-otp" state={{ email: unverifiedEmail }} className="btn btn-sm btn-outline-primary">
+                        Resend OTP
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button type="submit" className="btn btn-primary btn-login" disabled={isSubmitting}>
                 {isSubmitting ? (

@@ -11,7 +11,7 @@ def get_leaderboard():
     users = (
         User.query.filter_by(role="student")
         .order_by(User.xp_points.desc(), User.coins.desc())
-        .limit(10)
+        .limit(6)
         .all()
     )
 

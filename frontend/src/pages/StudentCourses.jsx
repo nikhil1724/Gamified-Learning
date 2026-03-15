@@ -12,13 +12,21 @@ const StudentCourses = () => {
   const [enrollingId, setEnrollingId] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [category, setCategory] = useState("");
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
       setError("");
+      const params = {};
+      if (search.trim()) params.search = search.trim();
+      if (difficulty) params.difficulty = difficulty;
+      if (category) params.category = category;
+
       const [availableResponse, enrolledResponse] = await Promise.all([
-        api.get("/courses"),
+        api.get("/courses", { params }),
         api.get("/student/courses"),
       ]);
       setAvailableCourses(availableResponse.data || []);
@@ -32,7 +40,7 @@ const StudentCourses = () => {
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [search, difficulty, category]);
 
   const enrolledIds = useMemo(
     () => new Set(enrolledCourses.map((course) => course.id ?? course.course_id)),
@@ -96,6 +104,35 @@ const StudentCourses = () => {
               </button>
             </div>
 
+            <div className="student-courses-filters mb-3">
+              <input
+                className="form-control"
+                placeholder="Search by course title"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <select
+                className="form-select"
+                value={difficulty}
+                onChange={(event) => setDifficulty(event.target.value)}
+              >
+                <option value="">All Difficulty</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+              <select
+                className="form-select"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+              >
+                <option value="">All Category</option>
+                <option value="programming">Programming</option>
+                <option value="dsa">DSA</option>
+                <option value="web">Web</option>
+              </select>
+            </div>
+
             {loading ? (
               <div className="student-courses-grid">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -125,6 +162,12 @@ const StudentCourses = () => {
                       <p className="text-muted mb-3">
                         {course.description || "No description provided yet."}
                       </p>
+                      {(course.difficulty || course.category) ? (
+                        <div className="student-course-card__chips mb-2">
+                          {course.difficulty ? <span className="student-course-chip">{course.difficulty}</span> : null}
+                          {course.category ? <span className="student-course-chip">{course.category}</span> : null}
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         className="btn btn-primary"
@@ -143,7 +186,7 @@ const StudentCourses = () => {
               </div>
             ) : (
               <div className="student-courses-empty">
-                No courses are available right now. Check back soon.
+                No courses match your current filters.
               </div>
             )}
           </section>
