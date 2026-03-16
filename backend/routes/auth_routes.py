@@ -3,6 +3,7 @@ import secrets
 
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import db
@@ -217,47 +218,56 @@ def _serialize_profile(user):
 
 @auth_bp.post("/register")
 def register():
-    data = request.get_json(silent=True) or {}
-    missing = _missing_fields(data, ["name", "email", "password"])
-    if missing:
-        return jsonify({"error": "Missing fields", "fields": missing}), 400
+    try:
+        data = request.get_json(silent=True) or {}
+        missing = _missing_fields(data, ["name", "email", "password"])
+        if missing:
+            return jsonify({"error": "Missing fields", "fields": missing}), 400
 
-    name = data["name"].strip()
-    email = data["email"].strip().lower()
-    password = data["password"]
-    role = (data.get("role") or "student").strip().lower()
+        name = data["name"].strip()
+        email = data["email"].strip().lower()
+        password = data["password"]
+        role = (data.get("role") or "student").strip().lower()
 
-    if role not in {"teacher", "student", "admin"}:
-        return jsonify({"error": "Invalid role"}), 400
+        if role not in {"teacher", "student", "admin"}:
+            return jsonify({"error": "Invalid role"}), 400
 
-    if not name or not email or not password:
-        return jsonify({"error": "Invalid input"}), 400
+        if not name or not email or not password:
+            return jsonify({"error": "Invalid input"}), 400
 
-    existing_user = User.query.filter_by(email=email).first()
-    if existing_user:
-        return jsonify({"error": "Email already registered"}), 409
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return jsonify({"error": "Email already registered"}), 409
 
-    # Generate 6-digit OTP for email verification
-    verification_token = _generate_verification_otp()
-    token_expiry = _otp_expiry_datetime()
+        # Generate 6-digit OTP for email verification
+        verification_token = _generate_verification_otp()
+        token_expiry = _otp_expiry_datetime()
 
-    user = User(
-        name=name,
-        email=email,
-        password_hash=generate_password_hash(password),
-        role=role,
-        is_approved=True,
-        is_verified=False,
-        email_verified=False,
-        otp_code=verification_token,
-        otp_expiry=token_expiry,
-        verification_token=verification_token,
-        verification_token_expiry=token_expiry,
-        otp_resend_count=0,
-        otp_resend_window_start=datetime.utcnow(),
-    )
-    db.session.add(user)
-    db.session.commit()
+        user = User(
+            name=name,
+            email=email,
+            password_hash=generate_password_hash(password),
+            role=role,
+            is_approved=True,
+            is_verified=False,
+            email_verified=False,
+            otp_code=verification_token,
+            otp_expiry=token_expiry,
+            verification_token=verification_token,
+            verification_token_expiry=token_expiry,
+            otp_resend_count=0,
+            otp_resend_window_start=datetime.utcnow(),
+        )
+        db.session.add(user)
+        db.session.commit()
+    except OperationalError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database unavailable during register: %s", exc)
+        return jsonify({"error": "Database unavailable", "message": "Please try again shortly."}), 503
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database error during register: %s", exc)
+        return jsonify({"error": "Database error", "message": "Registration failed."}), 500
 
     # Send verification OTP email if enabled
     email_verification_required = current_app.config.get("EMAIL_VERIFICATION_REQUIRED", True)
@@ -306,62 +316,77 @@ def login():
     if request.method == "OPTIONS":
         return jsonify({"success": True}), 200
 
-    data = request.get_json(silent=True) or {}
-    missing = _missing_fields(data, ["email", "password"])
-    if missing:
+    try:
+        data = request.get_json(silent=True) or {}
+        missing = _missing_fields(data, ["email", "password"])
+        if missing:
+            return jsonify({
+                "success": False,
+                "error": "Missing fields",
+                "message": "Email and password are required.",
+                "fields": missing,
+            }), 400
+
+        email = data["email"].strip().lower()
+        password = data["password"]
+
+        user = User.query.filter_by(email=email).first()
+        if not user or not check_password_hash(user.password_hash, password):
+            return jsonify({
+                "success": False,
+                "error": "Invalid credentials",
+                "message": "Invalid email or password",
+            }), 401
+
+        # Check email verification if enabled
+        email_verification_required = current_app.config.get("EMAIL_VERIFICATION_REQUIRED", True)
+        if email_verification_required and not _is_user_verified(user):
+            return jsonify({
+                "success": False,
+                "error": "Email not verified",
+                "message": "Please verify your email before logging in. Check your inbox for the OTP.",
+                "is_verified": False,
+                "email_verified": False,
+                "user_id": user.id,
+            }), 403
+
+        access_token = create_access_token(
+            identity=str(user.id),
+            additional_claims={"role": user.role},
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "token": access_token,
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role,
+                    "is_approved": user.is_approved,
+                    "level": user.level,
+                    "xp_points": user.xp_points,
+                    "coins": user.coins,
+                    "is_verified": user.is_verified,
+                    "email_verified": user.email_verified,
+                },
+            }
+        )
+    except OperationalError as exc:
+        current_app.logger.exception("Database unavailable during login: %s", exc)
         return jsonify({
             "success": False,
-            "error": "Missing fields",
-            "message": "Email and password are required.",
-            "fields": missing,
-        }), 400
-
-    email = data["email"].strip().lower()
-    password = data["password"]
-
-    user = User.query.filter_by(email=email).first()
-    if not user or not check_password_hash(user.password_hash, password):
+            "error": "Database unavailable",
+            "message": "Please try again shortly.",
+        }), 503
+    except SQLAlchemyError as exc:
+        current_app.logger.exception("Database error during login: %s", exc)
         return jsonify({
             "success": False,
-            "error": "Invalid credentials",
-            "message": "Invalid email or password",
-        }), 401
-
-    # Check email verification if enabled
-    email_verification_required = current_app.config.get("EMAIL_VERIFICATION_REQUIRED", True)
-    if email_verification_required and not _is_user_verified(user):
-        return jsonify({
-            "success": False,
-            "error": "Email not verified",
-            "message": "Please verify your email before logging in. Check your inbox for the OTP.",
-            "is_verified": False,
-            "email_verified": False,
-            "user_id": user.id,
-        }), 403
-
-    access_token = create_access_token(
-        identity=str(user.id),
-        additional_claims={"role": user.role},
-    )
-
-    return jsonify(
-        {
-            "success": True,
-            "token": access_token,
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "role": user.role,
-                "is_approved": user.is_approved,
-                "level": user.level,
-                "xp_points": user.xp_points,
-                "coins": user.coins,
-                "is_verified": user.is_verified,
-                "email_verified": user.email_verified,
-            },
-        }
-    )
+            "error": "Database error",
+            "message": "Login failed. Please retry.",
+        }), 500
 
 
 @auth_bp.get("/profile")

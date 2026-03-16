@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from config import Config
 from database import db, init_db
@@ -226,6 +227,32 @@ def create_app() -> Flask:
     def server_error(error):
         app.logger.exception("Server error: %s", error)
         return jsonify({"success": False, "message": "Internal server error"}), 500
+
+    @app.errorhandler(OperationalError)
+    def database_operational_error(error):
+        app.logger.exception("Database operational error: %s", error)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Database temporarily unavailable. Please retry.",
+                }
+            ),
+            503,
+        )
+
+    @app.errorhandler(SQLAlchemyError)
+    def database_query_error(error):
+        app.logger.exception("Database query error: %s", error)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "A database error occurred.",
+                }
+            ),
+            500,
+        )
 
     @app.errorhandler(Exception)
     def handle_unexpected_exception(error):

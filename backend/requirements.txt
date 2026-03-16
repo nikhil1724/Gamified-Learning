@@ -8,6 +8,8 @@ click==8.1.7
 python-dotenv==1.0.1
 
 PyMySQL==1.1.0
+cryptography==42.0.8
+greenlet==3.0.3
 
 gunicorn==22.0.0
 reportlab==4.2.2

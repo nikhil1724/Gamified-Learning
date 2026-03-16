@@ -1,6 +1,6 @@
 import os
 from datetime import timedelta
-from urllib.parse import quote_plus
+from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 
@@ -11,6 +11,15 @@ def _normalize_database_url(url: str) -> str:
     normalized = url.strip()
     if normalized.startswith("mysql://"):
         normalized = normalized.replace("mysql://", "mysql+pymysql://", 1)
+
+    parsed = urlsplit(normalized)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    if "charset" not in query:
+        query["charset"] = "utf8mb4"
+
+    normalized = urlunsplit(
+        (parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment)
+    )
     return normalized
 
 
@@ -69,6 +78,13 @@ class Config:
         "pool_pre_ping": True,
         "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "280")),
         "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
+        "pool_size": int(os.getenv("DB_POOL_SIZE", "5")),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "10")),
+        "connect_args": {
+            "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "15")),
+            "read_timeout": int(os.getenv("DB_READ_TIMEOUT", "30")),
+            "write_timeout": int(os.getenv("DB_WRITE_TIMEOUT", "30")),
+        },
     }
     JSON_SORT_KEYS = False
     CORS_ORIGINS = _parse_cors_origins(os.getenv("CORS_ORIGINS", ""))
