@@ -259,6 +259,20 @@ See `DESIGN_SYSTEM_USAGE.md` and `DESIGN_SYSTEM_CHEATSHEET.md` for details.
 
 For debugging guidance, see `DEBUG_CHECKLIST.md`.
 
+## ✅ Post-Deploy Check
+
+Run this command from the project root after each deployment:
+
+```bash
+npm run deploy:check
+```
+
+What it verifies:
+- Frontend home and register pages are reachable.
+- Backend root and `/api/test` are reachable.
+- `/api/login` returns an expected auth error (not server error).
+- `/api/register` returns success/conflict (not server error).
+
 ## 📝 API Documentation
 
 ### Authentication Endpoints

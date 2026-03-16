@@ -1,1 +1,1 @@
-web: gunicorn app:app
+web: python bootstrap_db.py && python ensure_user_columns.py && gunicorn app:app
