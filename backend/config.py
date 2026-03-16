@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
@@ -39,12 +40,24 @@ def _build_database_uri() -> str:
 
 
 def _parse_cors_origins(value: str):
+    required_origin = "https://gamified-learning-flame.vercel.app"
     raw = (value or "").strip()
     if not raw:
-        return ["http://localhost:3000"]
+        return [required_origin]
     if raw == "*":
-        return "*"
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+        return [required_origin]
+
+    parsed_origins = []
+    for origin in raw.split(","):
+        normalized = origin.strip()
+        if not normalized:
+            continue
+        parsed_origins.append(normalized)
+
+    if required_origin not in parsed_origins:
+        parsed_origins.append(required_origin)
+
+    return parsed_origins
 
 
 class Config:
@@ -58,13 +71,20 @@ class Config:
         "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
     }
     JSON_SORT_KEYS = False
-    CORS_ORIGINS = _parse_cors_origins(os.getenv("CORS_ORIGINS", "http://localhost:3000"))
+    CORS_ORIGINS = _parse_cors_origins(os.getenv("CORS_ORIGINS", ""))
     JWT_SECRET_KEY = os.getenv(
         "JWT_SECRET",
         os.getenv(
         "JWT_SECRET_KEY",
         "change-this-secret-to-a-long-random-string-at-least-32-bytes",
         ),
+    )
+    JWT_TOKEN_LOCATION = ["headers"]
+    JWT_HEADER_NAME = "Authorization"
+    JWT_HEADER_TYPE = "Bearer"
+    JWT_ERROR_MESSAGE_KEY = "message"
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
+        hours=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_HOURS", "24"))
     )
 
     # Uploads configuration

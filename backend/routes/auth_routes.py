@@ -301,24 +301,37 @@ def register():
     )
 
 
-@auth_bp.post("/login")
+@auth_bp.route("/login", methods=["POST", "OPTIONS"])
 def login():
+    if request.method == "OPTIONS":
+        return jsonify({"success": True}), 200
+
     data = request.get_json(silent=True) or {}
     missing = _missing_fields(data, ["email", "password"])
     if missing:
-        return jsonify({"error": "Missing fields", "fields": missing}), 400
+        return jsonify({
+            "success": False,
+            "error": "Missing fields",
+            "message": "Email and password are required.",
+            "fields": missing,
+        }), 400
 
     email = data["email"].strip().lower()
     password = data["password"]
 
     user = User.query.filter_by(email=email).first()
     if not user or not check_password_hash(user.password_hash, password):
-        return jsonify({"error": "Invalid email or password"}), 401
+        return jsonify({
+            "success": False,
+            "error": "Invalid credentials",
+            "message": "Invalid email or password",
+        }), 401
 
     # Check email verification if enabled
     email_verification_required = current_app.config.get("EMAIL_VERIFICATION_REQUIRED", True)
     if email_verification_required and not _is_user_verified(user):
         return jsonify({
+            "success": False,
             "error": "Email not verified",
             "message": "Please verify your email before logging in. Check your inbox for the OTP.",
             "is_verified": False,
@@ -333,6 +346,7 @@ def login():
 
     return jsonify(
         {
+            "success": True,
             "token": access_token,
             "user": {
                 "id": user.id,

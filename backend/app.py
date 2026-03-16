@@ -99,7 +99,18 @@ def create_app() -> Flask:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
-    CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
+    CORS(
+        app,
+        resources={
+            r"/api/*": {
+                "origins": app.config["CORS_ORIGINS"],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Authorization", "Content-Type"],
+            }
+        },
+        supports_credentials=False,
+        vary_header=True,
+    )
 
     # Ensure uploads directory exists and is writable for notes/document uploads.
     uploads_dir = app.config.get("UPLOAD_DIR")
@@ -115,7 +126,46 @@ def create_app() -> Flask:
 
     # Initialize SQLAlchemy with the Flask app.
     init_db(app)
-    JWTManager(app)
+    jwt = JWTManager(app)
+
+    @jwt.unauthorized_loader
+    def jwt_missing_token(reason):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Authorization required",
+                    "message": reason,
+                }
+            ),
+            401,
+        )
+
+    @jwt.invalid_token_loader
+    def jwt_invalid_token(reason):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Invalid token",
+                    "message": reason,
+                }
+            ),
+            422,
+        )
+
+    @jwt.expired_token_loader
+    def jwt_expired_token(_header, _payload):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Token expired",
+                    "message": "Please login again.",
+                }
+            ),
+            401,
+        )
 
     with app.app_context():
         if app.config.get("RUN_STARTUP_TASKS"):
