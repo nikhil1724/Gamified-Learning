@@ -68,7 +68,7 @@ const CourseLessons = () => {
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const response = await api.get(`/api/lesson-progress/${course}`);
+        const response = await api.get(`/lesson-progress/${course}`);
         setCompletedLessons(response.data.completed_lessons || []);
       } catch (error) {
         console.error('Error fetching progress:', error);

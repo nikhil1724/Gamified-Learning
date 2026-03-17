@@ -72,15 +72,8 @@ const LearnHub = () => {
     const fetchAllProgress = async () => {
       try {
         const response = await api.get('/lesson-progress');
-        // Convert array of progress to object keyed by course
-        const progressByCourse = {};
-        response.data.progress.forEach(item => {
-          if (!progressByCourse[item.course]) {
-            progressByCourse[item.course] = [];
-          }
-          progressByCourse[item.course].push(item.lesson_id);
-        });
-        setCourseProgress(progressByCourse);
+        // Backend returns { progress: { "courseId": [lessonIds] } } — use directly
+        setCourseProgress(response.data.progress || {});
       } catch (error) {
         console.error('Error fetching progress:', error);
       }

@@ -44,7 +44,7 @@ const LessonPage = () => {
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const response = await api.get(`/api/lesson-progress/${course}`);
+        const response = await api.get(`/lesson-progress/${course}`);
         setCompletedLessons(response.data.completed_lessons || []);
         setIsCompleted(response.data.completed_lessons?.includes(parseInt(lesson)));
       } catch (error) {
@@ -68,7 +68,7 @@ const LessonPage = () => {
 
   const handleMarkComplete = async () => {
     try {
-      await api.post(`/api/lesson-progress/${course}/${lesson}`);
+      await api.post(`/lesson-progress/${course}/${lesson}`);
       setIsCompleted(true);
       setCompletedLessons([...completedLessons, parseInt(lesson)]);
     } catch (error) {
