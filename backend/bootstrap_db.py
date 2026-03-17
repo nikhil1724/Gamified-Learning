@@ -1,7 +1,5 @@
 """Create database tables during deployment if they do not exist."""
 
-import os
-
 from flask import Flask
 
 from config import Config
@@ -12,13 +10,10 @@ from seed_data import seed_quiz_data
 
 
 def _auto_seed_if_empty() -> None:
-    # Enabled by default for fresh deployments; can be disabled via env.
-    should_seed = os.getenv("AUTO_SEED_DEMO_DATA", "true").lower() == "true"
-    if not should_seed:
-        print("[bootstrap_db] AUTO_SEED_DEMO_DATA disabled")
-        return
+    quiz_count = Quiz.query.count()
+    print(f"[bootstrap_db] existing quizzes: {quiz_count}")
 
-    if Quiz.query.count() == 0:
+    if quiz_count == 0:
         seed_quiz_data()
         print("[bootstrap_db] demo seed data inserted")
     else:
