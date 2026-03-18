@@ -1,38 +1,31 @@
 """
-Email service for sending verification and notification emails via SMTP.
+Email service for sending verification and notification emails via Resend.
 """
 
 import logging
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import Optional
+
+import resend
 
 logger = logging.getLogger(__name__)
 
 
 class EmailService:
-    """Service for sending emails via SMTP."""
+    """Service for sending emails via Resend API."""
 
     def __init__(
         self,
-        smtp_server: str,
-        smtp_port: int,
-        smtp_username: str,
-        smtp_password: str,
+        api_key: str,
         from_email: str,
         from_name: str = "Gamified Learning Platform",
-        use_tls: bool = True,
-        smtp_timeout_seconds: int = 8,
     ):
-        self.smtp_server = smtp_server
-        self.smtp_port = smtp_port
-        self.smtp_username = smtp_username
-        self.smtp_password = smtp_password
+        self.api_key = api_key
         self.from_email = from_email
         self.from_name = from_name
-        self.use_tls = use_tls
-        self.smtp_timeout_seconds = smtp_timeout_seconds
+
+    @property
+    def _from_field(self) -> str:
+        return f"{self.from_name} <{self.from_email}>"
 
     def send_email(
         self,
@@ -41,28 +34,24 @@ class EmailService:
         html_content: str,
         text_content: Optional[str] = None,
     ) -> bool:
-        """Send an email via SMTP."""
+        """Send an email via Resend API."""
+        if not self.api_key or not self.from_email:
+            logger.error("Resend is not configured (missing RESEND_API_KEY or RESEND_FROM_EMAIL)")
+            return False
+
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
-            msg["To"] = to_email
+            resend.api_key = self.api_key
 
+            payload = {
+                "from": self._from_field,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+            }
             if text_content:
-                msg.attach(MIMEText(text_content, "plain"))
-            msg.attach(MIMEText(html_content, "html"))
+                payload["text"] = text_content
 
-            with smtplib.SMTP(
-                self.smtp_server,
-                self.smtp_port,
-                timeout=self.smtp_timeout_seconds,
-            ) as server:
-                server.ehlo()
-                if self.use_tls:
-                    server.starttls()
-                    server.ehlo()
-                server.login(self.smtp_username, self.smtp_password)
-                server.send_message(msg)
+            resend.Emails.send(payload)
 
             logger.info("Email sent successfully to %s", to_email)
             return True
@@ -100,18 +89,29 @@ class EmailService:
         self, to_email: str, user_name: str, otp_code: str, expiry_minutes: int = 5
     ) -> bool:
         """Send OTP verification email to user."""
-        subject = "Verify Your Account"
+        subject = "Verify your account"
 
         html_content = f"""
         <!DOCTYPE html>
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-            <h2>Verify Your Account</h2>
-            <p>Hello {user_name},</p>
-            <p>Your OTP for account verification is:</p>
-            <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px;">{otp_code}</p>
-            <p>This OTP is valid for {expiry_minutes} minutes.</p>
-            <p>If you did not request this OTP, please ignore this email.</p>
+        <html lang="en">
+        <body style="margin:0;padding:24px;background:#f3f4f6;font-family:Arial,sans-serif;color:#111827;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td align="center">
+                        <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+                            <tr>
+                                <td style="padding:28px 24px 10px 24px;">
+                                    <h2 style="margin:0 0 8px 0;font-size:24px;color:#111827;">Verify your account</h2>
+                                    <p style="margin:0 0 16px 0;font-size:15px;color:#374151;">Hello {user_name}, your OTP is:</p>
+                                    <p style="margin:0 0 18px 0;font-size:34px;font-weight:700;letter-spacing:8px;color:#1d4ed8;">{otp_code}</p>
+                                    <p style="margin:0 0 6px 0;font-size:14px;color:#374151;">This OTP is valid for {expiry_minutes} minutes.</p>
+                                    <p style="margin:0;font-size:13px;color:#6b7280;">If you did not request this OTP, you can safely ignore this email.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
         </body>
         </html>
         """

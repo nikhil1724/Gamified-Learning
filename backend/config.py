@@ -139,6 +139,8 @@ class Config:
     MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
     SMTP_TIMEOUT_SECONDS = int(os.getenv("SMTP_TIMEOUT_SECONDS", "8"))
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+    RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", os.getenv("MAIL_FROM_EMAIL", ""))
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", os.getenv("MAIL_FROM_EMAIL", "noreply@gamifiedlearning.com"))
     MAIL_FROM_EMAIL = os.getenv("MAIL_FROM_EMAIL", MAIL_DEFAULT_SENDER)
     MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "Gamified Learning Platform")

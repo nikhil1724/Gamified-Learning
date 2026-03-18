@@ -72,6 +72,8 @@ def _configure_test_env(temp_db_path: str):
     os.environ["MAIL_USE_TLS"] = "true"
     os.environ["MAIL_USERNAME"] = "smtp-test@example.com"
     os.environ["MAIL_PASSWORD"] = "smtp-test-password"
+    os.environ["RESEND_API_KEY"] = "re_test_api_key"
+    os.environ["RESEND_FROM_EMAIL"] = "no-reply@example.com"
     os.environ["AUTO_VERIFY_LEGACY_USERS"] = "false"
     os.environ["LEGACY_VERIFICATION_CUTOFF"] = ""
     os.environ["RUN_STARTUP_TASKS"] = "false"

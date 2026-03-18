@@ -28,7 +28,7 @@ def _missing_fields(payload, required_fields):
 
 
 def _mail_is_configured():
-    return bool(current_app.config.get("MAIL_USERNAME") and current_app.config.get("MAIL_PASSWORD"))
+    return bool(current_app.config.get("RESEND_API_KEY") and current_app.config.get("RESEND_FROM_EMAIL"))
 
 
 def _client_ip():
@@ -213,14 +213,9 @@ def send_otp_email(email, otp, user_name="Learner"):
         return False
 
     email_service = EmailService(
-        smtp_server=current_app.config["MAIL_SERVER"],
-        smtp_port=current_app.config["MAIL_PORT"],
-        use_tls=current_app.config.get("MAIL_USE_TLS", True),
-        smtp_username=current_app.config["MAIL_USERNAME"],
-        smtp_password=current_app.config["MAIL_PASSWORD"],
-        from_email=current_app.config["MAIL_FROM_EMAIL"],
+        api_key=current_app.config["RESEND_API_KEY"],
+        from_email=current_app.config["RESEND_FROM_EMAIL"],
         from_name=current_app.config["MAIL_FROM_NAME"],
-        smtp_timeout_seconds=current_app.config.get("SMTP_TIMEOUT_SECONDS", 8),
     )
 
     return email_service.send_verification_otp_email(
