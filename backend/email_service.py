@@ -23,6 +23,7 @@ class EmailService:
         from_email: str,
         from_name: str = "Gamified Learning Platform",
         use_tls: bool = True,
+        smtp_timeout_seconds: int = 8,
     ):
         self.smtp_server = smtp_server
         self.smtp_port = smtp_port
@@ -31,6 +32,7 @@ class EmailService:
         self.from_email = from_email
         self.from_name = from_name
         self.use_tls = use_tls
+        self.smtp_timeout_seconds = smtp_timeout_seconds
 
     def send_email(
         self,
@@ -50,9 +52,15 @@ class EmailService:
                 msg.attach(MIMEText(text_content, "plain"))
             msg.attach(MIMEText(html_content, "html"))
 
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            with smtplib.SMTP(
+                self.smtp_server,
+                self.smtp_port,
+                timeout=self.smtp_timeout_seconds,
+            ) as server:
+                server.ehlo()
                 if self.use_tls:
                     server.starttls()
+                    server.ehlo()
                 server.login(self.smtp_username, self.smtp_password)
                 server.send_message(msg)
 

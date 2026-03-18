@@ -220,6 +220,7 @@ def send_otp_email(email, otp, user_name="Learner"):
         smtp_password=current_app.config["MAIL_PASSWORD"],
         from_email=current_app.config["MAIL_FROM_EMAIL"],
         from_name=current_app.config["MAIL_FROM_NAME"],
+        smtp_timeout_seconds=current_app.config.get("SMTP_TIMEOUT_SECONDS", 8),
     )
 
     return email_service.send_verification_otp_email(
