@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { publicApi } from "../services/api";
+import { resendOtp, verifyOtp } from "../services/authApi";
 import "./VerifyEmailOTP.css";
+
+const DEFAULT_RESEND_COOLDOWN = 30;
 
 const VerifyEmailOTP = () => {
   const navigate = useNavigate();
@@ -10,7 +12,9 @@ const VerifyEmailOTP = () => {
   const [otp, setOtp] = useState("");
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(
+    Number(location.state?.resendCooldown || 0)
+  );
 
   useEffect(() => {
     if (resendCooldown <= 0) {
@@ -32,6 +36,13 @@ const VerifyEmailOTP = () => {
     }
   }, [email, location.state]);
 
+  useEffect(() => {
+    if (location.state?.otpSentMessage) {
+      setStatus("success");
+      setMessage(location.state.otpSentMessage);
+    }
+  }, [location.state]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -50,7 +61,7 @@ const VerifyEmailOTP = () => {
 
     try {
       setStatus("loading");
-      const response = await publicApi.post("/verify-email-otp", {
+      const response = await verifyOtp({
         email,
         otp,
       });
@@ -74,10 +85,12 @@ const VerifyEmailOTP = () => {
 
     try {
       setStatus("loading");
-      const response = await publicApi.post("/resend-otp", { email });
+      const response = await resendOtp({ email });
       setStatus("success");
       setMessage(response.data?.message || "Verification OTP sent.");
-      setResendCooldown(60);
+      setResendCooldown(
+        Number(response.data?.retry_after_seconds || DEFAULT_RESEND_COOLDOWN)
+      );
     } catch (error) {
       const retryAfter = Number(error?.response?.data?.retry_after_seconds || 0);
       if (retryAfter > 0) {
@@ -103,7 +116,10 @@ const VerifyEmailOTP = () => {
     <div className="verify-otp-page">
       <div className="verify-otp-card">
         <h2>Verify Email With OTP</h2>
-        <p className="subtitle">Enter the OTP sent to your email address.</p>
+        <p className="subtitle">Check your email and enter OTP here.</p>
+        {email ? (
+          <p className="otp-target-email">OTP sent to your email ({email})</p>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="verify-otp-form">
           <div className="form-group">
@@ -130,6 +146,7 @@ const VerifyEmailOTP = () => {
               maxLength={6}
               required
             />
+            <small className="otp-hint">Enter exactly 6 digits from your email.</small>
           </div>
 
           {message ? (

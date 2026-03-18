@@ -140,11 +140,28 @@ class OtpFlowIntegrationTest(unittest.TestCase):
         email = "otp.flow@example.com"
         password = "Pass@1234"
 
-        register_response = self._register_user(email=email, password=password)
+        sent_otp = {}
+
+        def _capture_otp(_email, otp, _name="Learner"):
+            sent_otp["value"] = otp
+            return True
+
+        payload = {
+            "name": "OTP User",
+            "email": email,
+            "password": password,
+            "role": "student",
+        }
+
+        with patch("routes.auth_routes.send_otp_email", side_effect=_capture_otp):
+            register_response = self.client.post("/api/register", json=payload)
+
         self.assertEqual(register_response.status_code, 201)
         register_data = register_response.get_json()
         self.assertEqual(register_data.get("email_sent"), True)
         self.assertNotIn("verification_otp", register_data)
+        self.assertIn("value", sent_otp)
+        raw_otp = sent_otp["value"]
 
         login_before_verify = self.client.post(
             "/api/login",
@@ -158,9 +175,8 @@ class OtpFlowIntegrationTest(unittest.TestCase):
             self.assertFalse(user.is_verified)
             self.assertIsNotNone(user.otp_code)
             self.assertEqual(len(user.otp_code), 64)
-            raw_otp = user.verification_token
-            self.assertIsNotNone(raw_otp)
-            self.assertEqual(len(raw_otp), 6)
+            self.assertIsNotNone(user.verification_token)
+            self.assertEqual(len(user.verification_token), 64)
 
         verify_response = self.client.post(
             "/api/verify-otp",

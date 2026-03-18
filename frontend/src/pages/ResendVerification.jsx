@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { publicApi } from "../services/api";
+import { resendOtp } from "../services/authApi";
 import "./ResendVerification.css";
 
 const ResendVerification = () => {
@@ -43,7 +43,7 @@ const ResendVerification = () => {
     setMessage("");
 
     try {
-      const response = await publicApi.post("/resend-verification", { email });
+      const response = await resendOtp({ email });
       setStatus("success");
       setMessage(response.data.message);
     } catch (error) {

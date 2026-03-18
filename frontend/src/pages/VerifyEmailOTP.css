@@ -28,6 +28,14 @@
   color: #64748b;
 }
 
+.otp-target-email {
+  margin: -14px 0 18px;
+  text-align: center;
+  color: #1e40af;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .verify-otp-form {
   display: flex;
   flex-direction: column;
@@ -57,6 +65,11 @@
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.otp-hint {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .verify-otp-form button {

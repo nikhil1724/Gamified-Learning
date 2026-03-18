@@ -7,6 +7,7 @@ from collections import defaultdict
 
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from sqlalchemy import or_
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -140,9 +141,11 @@ def _set_user_verified(user, verified):
 
 def _set_user_otp(user, otp_code, otp_expiry):
     # Keep both old and new fields in sync for compatibility.
-    user.otp_code = _hash_otp(otp_code) if otp_code else None
+    hashed_otp = _hash_otp(otp_code) if otp_code else None
+    user.otp_code = hashed_otp
     user.otp_expiry = otp_expiry
-    user.verification_token = otp_code
+    # Store verification token as hash only; never persist raw OTP.
+    user.verification_token = hashed_otp
     user.verification_token_expiry = otp_expiry
 
 
@@ -374,16 +377,13 @@ def register():
             is_approved=True,
             is_verified=False,
             email_verified=False,
-            otp_code=_hash_otp(verification_token),
-            otp_expiry=token_expiry,
-            verification_token=verification_token,
-            verification_token_expiry=token_expiry,
             otp_resend_count=0,
             otp_resend_window_start=datetime.utcnow(),
             otp_last_sent_at=datetime.utcnow(),
             otp_verify_fail_count=0,
             otp_verify_locked_until=None,
         )
+        _set_user_otp(user, verification_token, token_expiry)
         db.session.add(user)
 
         email_sent = True
@@ -567,7 +567,10 @@ def update_profile():
 @auth_bp.get("/verify-email/<token>")
 def verify_email(token):
     """Verify user email with token or OTP."""
-    user = User.query.filter_by(verification_token=token).first()
+    token_hash = _hash_otp(token)
+    user = User.query.filter(
+        or_(User.verification_token == token_hash, User.verification_token == token)
+    ).first()
     
     if not user:
         return jsonify({"error": "Invalid verification token"}), 400
