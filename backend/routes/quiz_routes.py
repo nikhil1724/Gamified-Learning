@@ -2,7 +2,9 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from database import db
-from activity_service import record_learning_activity
+from activity_service import record_learning_activity, update_user_streak
+from badge_service import assign_eligible_badges
+from leaderboard_service import broadcast_leaderboard_update
 from models import Course, Enrollment, Progress, Question, Quiz, User
 from routes.reward_routes import check_and_unlock_rewards
 from routes.skill_routes import unlock_skills_for_quiz
@@ -148,6 +150,7 @@ def submit_quiz():
     completion_percentage = (answered_count / total_questions) * 100
     xp_earned = score * 10
     coins_earned = score
+    client_timezone = request.headers.get("X-User-Timezone")
 
     existing_progress_count = Progress.query.filter_by(user_id=user.id).count()
 
@@ -161,13 +164,13 @@ def submit_quiz():
         completion_percentage=completion_percentage,
     )
     db.session.add(progress)
+    streak_info = update_user_streak(user=user, user_timezone=client_timezone)
+    record_learning_activity(
+        user_id=user.id,
+        user_timezone=client_timezone,
+        auto_commit=False,
+    )
     db.session.commit()
-
-    try:
-        record_learning_activity(user.id)
-    except Exception:
-        # Avoid breaking quiz submission if streak tracking fails.
-        db.session.rollback()
 
     # Create notification for quiz completion and XP earned
     create_notification(
@@ -185,13 +188,13 @@ def submit_quiz():
         }
     )
 
-    unlocked_badges = check_and_unlock_rewards(
+    unlocked_rewards = check_and_unlock_rewards(
         user=user,
         first_quiz_completed=existing_progress_count == 0,
     )
     
     # Create notifications for unlocked badges
-    for badge in unlocked_badges:
+    for badge in unlocked_rewards:
         create_notification(
             user_id=user.id,
             notification_type="BADGE_EARNED",
@@ -203,8 +206,26 @@ def submit_quiz():
                 "badge_description": badge["description"],
             }
         )
+
+    unlocked_badges = assign_eligible_badges(user=user, trigger="quiz_complete")
+    db.session.commit()
+
+    for badge in unlocked_badges:
+        create_notification(
+            user_id=user.id,
+            notification_type="BADGE_EARNED",
+            title="Achievement Unlocked!",
+            message=f"You earned '{badge['name']}' {badge['icon'] or '🏅'}",
+            data={
+                "badge_id": badge["id"],
+                "badge_name": badge["name"],
+                "badge_description": badge["description"],
+                "badge_icon": badge["icon"],
+            },
+        )
     
     unlocked_skills = unlock_skills_for_quiz(user=user, quiz=quiz)
+    broadcast_leaderboard_update()
 
     return jsonify(
         {
@@ -212,6 +233,10 @@ def submit_quiz():
             "total_questions": total_questions,
             "xp_earned": xp_earned,
             "coins_earned": coins_earned,
+            "streak_count": streak_info["current_streak"],
+            "longest_streak": streak_info["longest_streak"],
+            "last_active_date": streak_info["last_active_date"],
+            "unlocked_rewards": unlocked_rewards,
             "unlocked_badges": unlocked_badges,
             "unlocked_skills": unlocked_skills,
         }

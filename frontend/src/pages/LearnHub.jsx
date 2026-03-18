@@ -94,7 +94,7 @@ const LearnHub = () => {
       <div className="learn-hub">
         {/* Hero Section */}
         <div className="learn-hero">
-          <div className="learn-hero-content">
+          <div className="learn-hub__container learn-hero-content">
             <h1 className="learn-hero-title">
               <span className="learn-gradient-text">Learn to Code</span>
             </h1>
@@ -129,7 +129,7 @@ const LearnHub = () => {
 
         {/* Search and Filters */}
         <div className="learn-controls">
-          <div className="container">
+          <div className="learn-hub__container">
             <div className="search-bar">
               <i className="bi bi-search"></i>
               <input
@@ -170,7 +170,7 @@ const LearnHub = () => {
         </div>
 
         {/* Courses Grid */}
-        <div className="container">
+        <div className="learn-hub__container">
           <div className="courses-grid">
             {filteredCourses.map(course => (
               <div key={course.id} className="course-card">

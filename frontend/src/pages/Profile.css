@@ -11,11 +11,45 @@
 .profile-hero {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   padding: 20px 24px;
   border-radius: 14px;
   background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
   border: 1px solid var(--color-border);
+}
+
+.streak-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid #f4b266;
+  background: linear-gradient(135deg, #fff4df 0%, #ffe8c9 100%);
+  box-shadow: 0 10px 24px rgba(230, 125, 18, 0.16);
+}
+
+.streak-pill__fire {
+  font-size: 22px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgba(230, 125, 18, 0.35));
+}
+
+.streak-pill__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.streak-pill__text strong {
+  font-size: 15px;
+  color: #7b3b09;
+}
+
+.streak-pill__text small {
+  color: #9a5a20;
 }
 
 .profile-hero__avatar {
@@ -123,6 +157,11 @@
   .profile-hero {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .streak-pill {
+    width: 100%;
+    border-radius: 14px;
   }
 
   .profile-side {

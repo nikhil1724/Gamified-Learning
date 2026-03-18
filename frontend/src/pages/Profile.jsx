@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import BadgeShowcase from "../components/BadgeShowcase";
 import PageTransition from "../components/PageTransition";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -8,6 +9,12 @@ import "./Profile.css";
 const Profile = () => {
   const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState(user);
+  const [badges, setBadges] = useState([]);
+  const [streak, setStreak] = useState({
+    current_streak: user?.streak_count ?? user?.daily_streak ?? 0,
+    longest_streak: user?.longest_streak ?? 0,
+    last_active_date: user?.last_active_date ?? null,
+  });
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -23,15 +30,31 @@ const Profile = () => {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/profile");
+        const [profileResponse, streakResponse, badgesResponse] = await Promise.all([
+          api.get("/profile"),
+          api.get("/streak"),
+          api.get("/badges"),
+        ]);
         if (!isMounted) {
           return;
         }
-        setProfile(response.data);
+        setProfile(profileResponse.data);
         setFormData({
-          name: response.data?.name || "",
-          email: response.data?.email || "",
+          name: profileResponse.data?.name || "",
+          email: profileResponse.data?.email || "",
         });
+        setStreak({
+          current_streak:
+            streakResponse.data?.current_streak ??
+            profileResponse.data?.streak_count ??
+            profileResponse.data?.daily_streak ??
+            0,
+          longest_streak:
+            streakResponse.data?.longest_streak ?? profileResponse.data?.longest_streak ?? 0,
+          last_active_date:
+            streakResponse.data?.last_active_date ?? profileResponse.data?.last_active_date ?? null,
+        });
+        setBadges(Array.isArray(badgesResponse.data) ? badgesResponse.data : []);
         setError("");
       } catch (err) {
         if (!isMounted) {
@@ -147,6 +170,20 @@ const Profile = () => {
               {profile?.created_at ? ` - Joined ${new Date(profile.created_at).toLocaleDateString()}` : ""}
             </p>
           </div>
+          <div className="streak-pill" aria-label="Current streak">
+            <span className="streak-pill__fire" role="img" aria-hidden="true">
+              🔥
+            </span>
+            <div className="streak-pill__text">
+              <strong>{streak.current_streak} day streak</strong>
+              <small>
+                Best: {streak.longest_streak} day{streak.longest_streak === 1 ? "" : "s"}
+                {streak.last_active_date
+                  ? ` • Active ${new Date(streak.last_active_date).toLocaleDateString()}`
+                  : ""}
+              </small>
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -176,7 +213,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <span className="metric-label">Daily Streak</span>
-                    <span className="metric-value">{profile?.daily_streak ?? 0}</span>
+                    <span className="metric-value">{streak.current_streak ?? profile?.daily_streak ?? 0}</span>
                   </div>
                 </div>
               </div>
@@ -193,6 +230,10 @@ const Profile = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <BadgeShowcase badges={badges} />
               </div>
             </div>
 

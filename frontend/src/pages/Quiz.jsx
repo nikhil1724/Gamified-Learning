@@ -152,7 +152,13 @@ const Quiz = () => {
           : undefined
       );
       setResult(response.data);
-      setUnlockedBadges(response.data?.unlocked_badges || []);
+      const unlocked = response.data?.unlocked_badges || [];
+      setUnlockedBadges(unlocked);
+      if (Array.isArray(unlocked) && unlocked.length) {
+        window.dispatchEvent(
+          new CustomEvent("achievement:unlock", { detail: { badges: unlocked } })
+        );
+      }
       try {
         const storedResult = {
           score: response.data?.score ?? 0,
@@ -351,10 +357,10 @@ const Quiz = () => {
                 <div key={badge.id} className="achievement-modal__badge">
                   <img
                     src={badge.image_url || fallbackBadgeImage}
-                    alt={badge.badge_name}
+                    alt={badge.name}
                   />
                   <div>
-                    <h6 className="mb-1">{badge.badge_name}</h6>
+                    <h6 className="mb-1">{badge.name}</h6>
                     <p className="mb-0 text-muted small">
                       {badge.description || "Achievement unlocked."}
                     </p>

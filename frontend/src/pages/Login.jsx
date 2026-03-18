@@ -71,6 +71,13 @@ const Login = () => {
       });
 
       const { token, user } = response.data;
+      const unlockedBadges = response.data?.unlocked_badges || [];
+
+      if (Array.isArray(unlockedBadges) && unlockedBadges.length) {
+        window.dispatchEvent(
+          new CustomEvent("achievement:unlock", { detail: { badges: unlockedBadges } })
+        );
+      }
 
       if (expectedRole && user?.role && user.role !== expectedRole) {
         setError(`This account is registered as a ${user.role}. Use the correct login.`);

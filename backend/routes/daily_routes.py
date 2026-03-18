@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from database import db
+from leaderboard_service import broadcast_leaderboard_update
 from models import DailyChallenge, Quiz, User
 
 
@@ -106,6 +107,7 @@ def complete_daily_challenge():
     user.xp_points += DAILY_BONUS_XP
 
     db.session.commit()
+    broadcast_leaderboard_update()
 
     return jsonify(
         {

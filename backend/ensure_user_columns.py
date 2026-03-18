@@ -62,6 +62,9 @@ def _ensure_columns(engine) -> None:
         "email_verified": "ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE",
         "verification_token": "ALTER TABLE users ADD COLUMN verification_token VARCHAR(255) NULL",
         "verification_token_expiry": "ALTER TABLE users ADD COLUMN verification_token_expiry DATETIME NULL",
+        "streak_count": "ALTER TABLE users ADD COLUMN streak_count INT NOT NULL DEFAULT 0",
+        "longest_streak": "ALTER TABLE users ADD COLUMN longest_streak INT NOT NULL DEFAULT 0",
+        "last_active_date": "ALTER TABLE users ADD COLUMN last_active_date DATE NULL",
     }
 
     with engine.begin() as conn:
@@ -78,6 +81,15 @@ def _ensure_columns(engine) -> None:
                     "UPDATE users "
                     "SET is_verified = email_verified "
                     "WHERE is_verified <> email_verified"
+                )
+            )
+
+        if "streak_count" in required and "longest_streak" in required:
+            conn.execute(
+                text(
+                    "UPDATE users "
+                    "SET streak_count = COALESCE(streak_count, daily_streak, 0), "
+                    "longest_streak = GREATEST(COALESCE(longest_streak, 0), COALESCE(daily_streak, 0))"
                 )
             )
 

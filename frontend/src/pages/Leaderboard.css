@@ -1,0 +1,33 @@
+.leaderboard-rank-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rank-delta {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rank-delta--up {
+  color: #15803d;
+}
+
+.rank-delta--down {
+  color: #b91c1c;
+}
+
+.rank-delta--same {
+  color: #64748b;
+}
+
+.table-row-rank-up {
+  background-color: #ecfdf3 !important;
+  transition: background-color 0.8s ease;
+}
+
+.table-row-rank-down {
+  background-color: #fff1f2 !important;
+  transition: background-color 0.8s ease;
+}

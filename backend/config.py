@@ -49,12 +49,17 @@ def _build_database_uri() -> str:
 
 
 def _parse_cors_origins(value: str):
-    required_origin = "https://gamified-learning-flame.vercel.app"
+    required_origins = {
+        "https://gamified-learning-flame.vercel.app",
+        "https://gamified-learning.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    }
     raw = (value or "").strip()
     if not raw:
-        return [required_origin]
+        return sorted(required_origins)
     if raw == "*":
-        return [required_origin]
+        return sorted(required_origins)
 
     parsed_origins = []
     for origin in raw.split(","):
@@ -63,10 +68,12 @@ def _parse_cors_origins(value: str):
             continue
         parsed_origins.append(normalized)
 
-    if required_origin not in parsed_origins:
-        parsed_origins.append(required_origin)
+    # Allow explicit Vercel preview patterns by preserving wildcard-like entries.
+    # Example CORS_ORIGINS: https://my-app.vercel.app,https://*.vercel.app
+    parsed_set = set(parsed_origins)
+    parsed_set.update(required_origins)
 
-    return parsed_origins
+    return sorted(parsed_set)
 
 
 class Config:

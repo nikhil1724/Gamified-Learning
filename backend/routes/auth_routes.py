@@ -7,6 +7,8 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import db
+from activity_service import update_user_streak
+from badge_service import assign_eligible_badges
 from models import User
 from email_service import EmailService
 
@@ -210,6 +212,9 @@ def _serialize_profile(user):
         "level": user.level,
         "xp_points": user.xp_points,
         "coins": user.coins,
+        "streak_count": user.streak_count,
+        "longest_streak": user.longest_streak,
+        "last_active_date": user.last_active_date.isoformat() if user.last_active_date else None,
         "daily_streak": user.daily_streak,
         "created_at": user.created_at.isoformat(),
         "stats": _build_profile_stats(user),
@@ -350,6 +355,11 @@ def login():
                 "user_id": user.id,
             }), 403
 
+        client_timezone = request.headers.get("X-User-Timezone")
+        update_user_streak(user=user, user_timezone=client_timezone)
+        newly_unlocked_badges = assign_eligible_badges(user=user, trigger="login")
+        db.session.commit()
+
         access_token = create_access_token(
             identity=str(user.id),
             additional_claims={"role": user.role},
@@ -368,9 +378,14 @@ def login():
                     "level": user.level,
                     "xp_points": user.xp_points,
                     "coins": user.coins,
+                    "streak_count": user.streak_count,
+                    "longest_streak": user.longest_streak,
+                    "last_active_date": user.last_active_date.isoformat() if user.last_active_date else None,
+                    "daily_streak": user.daily_streak,
                     "is_verified": user.is_verified,
                     "email_verified": user.email_verified,
                 },
+                "unlocked_badges": newly_unlocked_badges,
             }
         )
     except OperationalError as exc:

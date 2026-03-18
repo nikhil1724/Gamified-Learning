@@ -141,6 +141,7 @@ body {
 @media (max-width: 991px) {
   .navbar-container {
     align-items: center;
+    gap: 12px;
   }
 
   .navbar-theme {
@@ -153,8 +154,10 @@ body {
     background: #ffffff;
     border: 1px solid var(--card-border);
     border-radius: 14px;
-    padding: 8px 12px;
+    padding: 8px 10px;
     box-shadow: var(--shadow-sm);
+    max-height: calc(100dvh - 110px);
+    overflow-y: auto;
   }
 
   .navbar-primary-wrap {
@@ -175,6 +178,7 @@ body {
     margin: 8px 0 0 0;
     justify-content: flex-start;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .navbar-primary {
@@ -192,10 +196,32 @@ body {
 
   .navbar-link {
     padding: 0.5rem 0;
+    font-size: 0.95rem;
   }
 
   .navbar-link::after {
     bottom: -2px;
+  }
+}
+
+@media (max-width: 420px) {
+  .navbar-container {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .navbar-brand {
+    font-size: 1rem;
+    max-width: calc(100vw - 130px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .navbar-actions .btn {
+    min-height: 36px;
+    padding: 0.36rem 0.64rem;
+    font-size: 0.8rem;
   }
 }
 

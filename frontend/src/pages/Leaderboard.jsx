@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
+import { getLeaderboardSocket } from "../services/leaderboardSocket";
 import api from "../services/api";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/Skeletons";
+import "./Leaderboard.css";
 
 const medalByRank = {
   1: "🥇",
@@ -17,12 +19,66 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const applyLeaderboard = (incomingRows) => {
+    if (!Array.isArray(incomingRows)) {
+      return;
+    }
+
+    setRows((previousRows) => {
+      const previousRankById = new Map(previousRows.map((entry) => [entry.id, entry.rank]));
+
+      return incomingRows.map((entry) => {
+        const previousRank = previousRankById.get(entry.id);
+        const rankDelta = typeof previousRank === "number" ? previousRank - entry.rank : 0;
+
+        return {
+          ...entry,
+          rank_delta: rankDelta,
+        };
+      });
+    });
+  };
+
+  const applyLeaderboardDelta = (payload) => {
+    const changed = Array.isArray(payload?.changed) ? payload.changed : [];
+    const removedIds = Array.isArray(payload?.removed_ids) ? payload.removed_ids : [];
+
+    if (changed.length === 0 && removedIds.length === 0) {
+      return;
+    }
+
+    setRows((previousRows) => {
+      const previousRankById = new Map(previousRows.map((entry) => [entry.id, entry.rank]));
+      const mergedById = new Map(previousRows.map((entry) => [entry.id, { ...entry }]));
+
+      removedIds.forEach((id) => {
+        mergedById.delete(id);
+      });
+
+      changed.forEach((entry) => {
+        mergedById.set(entry.id, { ...entry });
+      });
+
+      return Array.from(mergedById.values())
+        .sort((a, b) => a.rank - b.rank)
+        .map((entry) => {
+          const previousRank = previousRankById.get(entry.id);
+          const rankDelta = typeof previousRank === "number" ? previousRank - entry.rank : 0;
+
+          return {
+            ...entry,
+            rank_delta: rankDelta,
+          };
+        });
+    });
+  };
+
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
         setLoading(true);
         const response = await api.get("/leaderboard");
-        setRows(response.data || []);
+        applyLeaderboard(response.data || []);
       } catch (err) {
         setError(err?.response?.data?.error || "Failed to load leaderboard.");
       } finally {
@@ -31,6 +87,40 @@ const Leaderboard = () => {
     };
 
     fetchLeaderboard();
+
+    const pollingInterval = setInterval(fetchLeaderboard, 30000);
+    return () => clearInterval(pollingInterval);
+  }, []);
+
+  useEffect(() => {
+    const socket = getLeaderboardSocket();
+
+    const onConnect = () => {
+      socket.emit("leaderboard:subscribe");
+    };
+
+    const onLeaderboardUpdate = (payload) => {
+      if (Array.isArray(payload)) {
+        applyLeaderboard(payload);
+      } else if (payload?.mode === "full") {
+        applyLeaderboard(payload.rows || []);
+      } else if (payload?.mode === "delta") {
+        applyLeaderboardDelta(payload);
+      }
+      setError("");
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("leaderboard:update", onLeaderboardUpdate);
+
+    if (socket.connected) {
+      socket.emit("leaderboard:subscribe");
+    }
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("leaderboard:update", onLeaderboardUpdate);
+    };
   }, []);
 
   const currentUserId = user?.id;
@@ -80,11 +170,41 @@ const Leaderboard = () => {
               {leaderboardRows.map((entry) => (
                 <tr
                   key={entry.id}
-                  className={entry.isCurrentUser ? "table-primary" : ""}
+                  className={`${entry.isCurrentUser ? "table-primary" : ""} ${
+                    entry.rank_delta > 0
+                      ? "table-row-rank-up"
+                      : entry.rank_delta < 0
+                        ? "table-row-rank-down"
+                        : ""
+                  }`}
                 >
                   <td>
-                    <span className="fw-semibold">{entry.rank}</span>{" "}
-                    <span className="ms-1">{medalByRank[entry.rank]}</span>
+                    <span className="leaderboard-rank-cell">
+                      <span className="fw-semibold">{entry.rank}</span>
+                      <span>{medalByRank[entry.rank]}</span>
+                      <span
+                        className={`rank-delta ${
+                          entry.rank_delta > 0
+                            ? "rank-delta--up"
+                            : entry.rank_delta < 0
+                              ? "rank-delta--down"
+                              : "rank-delta--same"
+                        }`}
+                        title={
+                          entry.rank_delta > 0
+                            ? "Rank moved up"
+                            : entry.rank_delta < 0
+                              ? "Rank moved down"
+                              : "Rank unchanged"
+                        }
+                      >
+                        {entry.rank_delta > 0
+                          ? `↑${entry.rank_delta}`
+                          : entry.rank_delta < 0
+                            ? `↓${Math.abs(entry.rank_delta)}`
+                            : "-"}
+                      </span>
+                    </span>
                   </td>
                   <td>
                     <span className="fw-semibold">{entry.name}</span>

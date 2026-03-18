@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from database import db
 
@@ -24,6 +24,9 @@ class User(db.Model):
     xp_points = db.Column(db.Integer, default=0, nullable=False)
     coins = db.Column(db.Integer, default=0, nullable=False)
     daily_streak = db.Column(db.Integer, default=0, nullable=False)
+    streak_count = db.Column(db.Integer, default=0, nullable=False)
+    longest_streak = db.Column(db.Integer, default=0, nullable=False)
+    last_active_date = db.Column(db.Date, nullable=True)
     last_daily_completed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -438,10 +441,14 @@ class ProblemProgress(db.Model):
 
 class Badge(db.Model):
     __tablename__ = "badges"
+    __table_args__ = (
+        db.UniqueConstraint("name", name="uq_badges_name"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    icon = db.Column(db.String(32), nullable=True)
     rule_type = db.Column(db.String(60), nullable=True)
     rule_value = db.Column(db.Integer, nullable=True)
 
@@ -453,6 +460,10 @@ class Badge(db.Model):
 
 class UserBadge(db.Model):
     __tablename__ = "user_badges"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "badge_id", name="uq_user_badges_user_badge"),
+        db.Index("idx_user_badges_user_earned", "user_id", "earned_at"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)

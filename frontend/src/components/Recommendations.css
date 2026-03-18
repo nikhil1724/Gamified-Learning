@@ -39,6 +39,12 @@
   box-shadow: 0 2px 10px rgba(59, 130, 246, 0.08);
 }
 
+.recommendation-card--next {
+  border-color: #f5c57a;
+  background: linear-gradient(135deg, #fff7e9 0%, #ffedd5 100%);
+  box-shadow: 0 10px 20px rgba(180, 83, 9, 0.12);
+}
+
 .recommendation-card__tag {
   display: inline-block;
   font-size: 0.72rem;

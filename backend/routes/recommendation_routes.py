@@ -4,7 +4,6 @@ from flask import Blueprint, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import func, or_
 
-from adaptive_engine import analyze_user_performance
 from database import db
 from models import Course, Lesson, LessonProgress, Quiz, QuizAttempt, User
 
@@ -189,6 +188,150 @@ def _build_recommendations(user_id: int) -> dict:
     }
 
 
+def _serialize_quiz(quiz: Quiz, reason: str) -> dict:
+    return {
+        "id": quiz.id,
+        "title": quiz.title,
+        "topic": quiz.topic,
+        "difficulty": quiz.difficulty,
+        "course_id": quiz.course_id,
+        "reason": reason,
+    }
+
+
+def _build_smart_recommendation_payload(user_id: int) -> dict:
+    score_pct_expr = (QuizAttempt.score * 100.0) / func.nullif(QuizAttempt.total_questions, 0)
+
+    topic_rows = (
+        db.session.query(
+            Quiz.topic.label("topic"),
+            func.count(QuizAttempt.id).label("attempt_count"),
+            func.avg(score_pct_expr).label("avg_score_pct"),
+            func.max(QuizAttempt.attempted_at).label("last_attempted_at"),
+        )
+        .join(Quiz, Quiz.id == QuizAttempt.quiz_id)
+        .filter(QuizAttempt.user_id == user_id)
+        .group_by(Quiz.topic)
+        .order_by(func.avg(score_pct_expr).asc(), func.count(QuizAttempt.id).desc())
+        .all()
+    )
+
+    weak_topics = [
+        {
+            "topic": row.topic or "General",
+            "attempt_count": int(row.attempt_count or 0),
+            "avg_score_pct": round(float(row.avg_score_pct or 0.0), 1),
+            "last_attempted_at": row.last_attempted_at.isoformat() if row.last_attempted_at else None,
+        }
+        for row in topic_rows
+        if (row.avg_score_pct or 0) < 70
+    ][:3]
+
+    attempted_quiz_ids = {
+        row.quiz_id
+        for row in db.session.query(QuizAttempt.quiz_id)
+        .filter(QuizAttempt.user_id == user_id)
+        .distinct()
+        .all()
+    }
+
+    started_course_ids = {
+        row.course_id
+        for row in db.session.query(LessonProgress.course_id)
+        .filter(LessonProgress.user_id == user_id)
+        .distinct()
+        .all()
+    }
+
+    weakest_topic = weak_topics[0]["topic"] if weak_topics else None
+
+    next_quiz = None
+    recommended_quizzes = []
+
+    preferred_query = Quiz.query
+    if weakest_topic and weakest_topic != "General":
+        preferred_query = preferred_query.filter(Quiz.topic == weakest_topic)
+    if started_course_ids:
+        preferred_query = preferred_query.filter(Quiz.course_id.in_(started_course_ids))
+    if attempted_quiz_ids:
+        preferred_query = preferred_query.filter(~Quiz.id.in_(attempted_quiz_ids))
+
+    preferred_candidates = preferred_query.order_by(Quiz.id.asc()).limit(5).all()
+
+    if preferred_candidates:
+        reason = (
+            f"This quiz targets your weakest topic: {weakest_topic}."
+            if weakest_topic and weakest_topic != "General"
+            else "This quiz aligns with your in-progress learning path."
+        )
+        recommended_quizzes.extend([_serialize_quiz(quiz, reason) for quiz in preferred_candidates])
+
+    if len(recommended_quizzes) < 5:
+        fallback_query = Quiz.query
+        if attempted_quiz_ids:
+            fallback_query = fallback_query.filter(~Quiz.id.in_(attempted_quiz_ids))
+
+        fallback_candidates = fallback_query.order_by(Quiz.id.asc()).limit(8).all()
+        for quiz in fallback_candidates:
+            if any(existing["id"] == quiz.id for existing in recommended_quizzes):
+                continue
+            recommended_quizzes.append(
+                _serialize_quiz(
+                    quiz,
+                    "Recommended based on your past attempts and available progression path.",
+                )
+            )
+            if len(recommended_quizzes) >= 5:
+                break
+
+    if recommended_quizzes:
+        next_quiz = recommended_quizzes[0]
+
+    legacy_recommendations = _build_recommendations(user_id)
+
+    total_attempts = (
+        db.session.query(func.count(QuizAttempt.id)).filter(QuizAttempt.user_id == user_id).scalar() or 0
+    )
+    avg_attempt_score = (
+        db.session.query(func.avg(score_pct_expr)).filter(QuizAttempt.user_id == user_id).scalar() or 0.0
+    )
+
+    difficulty_suggestion = "Medium"
+    if avg_attempt_score >= 80:
+        difficulty_suggestion = "Hard"
+    elif avg_attempt_score < 50:
+        difficulty_suggestion = "Easy"
+
+    return {
+        "next_quiz": next_quiz,
+        "weak_topics": weak_topics,
+        "recommended_quizzes": recommended_quizzes,
+        "attempt_analytics": {
+            "total_attempts": int(total_attempts),
+            "avg_attempt_score_pct": round(float(avg_attempt_score), 1),
+            "attempted_quiz_count": len(attempted_quiz_ids),
+        },
+        "performance_summary": {
+            "accuracy_percentage": round(float(avg_attempt_score), 1),
+            "average_score": round(float(avg_attempt_score), 1),
+            "trend": "steady",
+            "weak_topics": [item["topic"] for item in weak_topics],
+            "topic_accuracy": [
+                {
+                    "topic": row.topic or "General",
+                    "accuracy": round(float(row.avg_score_pct or 0.0), 1),
+                    "correct": 0,
+                    "total_questions": 0,
+                }
+                for row in topic_rows
+            ],
+        },
+        "difficulty_suggestion": difficulty_suggestion,
+        # Keep existing frontend consumers working.
+        **legacy_recommendations,
+    }
+
+
 @recommendation_bp.get("/recommendations")
 @jwt_required()
 def get_recommendations():
@@ -197,8 +340,7 @@ def get_recommendations():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    data = analyze_user_performance(user_id)
-    return jsonify(data)
+    return jsonify(_build_smart_recommendation_payload(user_id))
 
 
 @recommendation_bp.get("/recommendations/<int:user_id>")
@@ -216,4 +358,4 @@ def get_recommendations_for_user(user_id: int):
     if not target_user:
         return jsonify({"error": "Target user not found"}), 404
 
-    return jsonify(_build_recommendations(user_id)), 200
+    return jsonify(_build_smart_recommendation_payload(user_id)), 200

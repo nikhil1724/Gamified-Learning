@@ -31,6 +31,8 @@ from routes.notification_routes import notification_bp
 from routes.analytics_routes import analytics_bp
 from routes.teacher_analytics_routes import teacher_analytics_bp
 from routes.activity_routes import activity_bp
+from routes.badge_routes import badge_bp
+from socketio_service import init_socketio, socketio
 from seed_data import seed_quiz_data
 from models import User
 
@@ -106,7 +108,8 @@ def create_app() -> Flask:
             r"/api/*": {
                 "origins": app.config["CORS_ORIGINS"],
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                "allow_headers": ["Authorization", "Content-Type"],
+                "allow_headers": ["Authorization", "Content-Type", "X-User-Timezone"],
+                "expose_headers": ["Content-Type", "Authorization"],
             }
         },
         supports_credentials=False,
@@ -127,6 +130,7 @@ def create_app() -> Flask:
 
     # Initialize SQLAlchemy with the Flask app.
     init_db(app)
+    init_socketio(app)
     jwt = JWTManager(app)
 
     @jwt.unauthorized_loader
@@ -193,6 +197,7 @@ def create_app() -> Flask:
     app.register_blueprint(analytics_bp)
     app.register_blueprint(teacher_analytics_bp)
     app.register_blueprint(activity_bp)
+    app.register_blueprint(badge_bp)
 
     @app.get("/")
     def root_route():
@@ -293,4 +298,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")))
+    socketio.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "5000")))

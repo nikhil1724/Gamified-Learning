@@ -6,6 +6,7 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import SplashScreen from "./components/SplashScreen";
+import AchievementToastHost from "./components/AchievementToastHost";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Leaderboard from "./pages/Leaderboard";
@@ -355,6 +356,7 @@ const App = () => {
       }}
     >
       <Navbar />
+      <AchievementToastHost />
       <AppRoutes
         isAuthenticated={isAuthenticated}
         role={role}

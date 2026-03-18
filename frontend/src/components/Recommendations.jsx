@@ -8,6 +8,9 @@ import "./Recommendations.css";
 const Recommendations = () => {
   const { user, isAuthenticated } = useAuth();
   const [data, setData] = useState({
+    next_quiz: null,
+    weak_topics: [],
+    recommended_quizzes: [],
     recommended_courses: [],
     recommended_lessons: [],
     ai_signals: { weak_topics: [] },
@@ -19,6 +22,9 @@ const Recommendations = () => {
     const fetchRecommendations = async () => {
       if (!isAuthenticated || !user?.id) {
         setData({
+          next_quiz: null,
+          weak_topics: [],
+          recommended_quizzes: [],
           recommended_courses: [],
           recommended_lessons: [],
           ai_signals: { weak_topics: [] },
@@ -29,12 +35,15 @@ const Recommendations = () => {
       try {
         setLoading(true);
         setError("");
-        const res = await api.get(`/recommendations/${user.id}`);
+        const res = await api.get("/recommendations");
         setData({
+          next_quiz: res.data?.next_quiz || null,
+          weak_topics: res.data?.weak_topics || [],
+          recommended_quizzes: res.data?.recommended_quizzes || [],
           recommended_courses: res.data?.recommended_courses || [],
           recommended_lessons: res.data?.recommended_lessons || [],
           ai_signals: {
-            weak_topics: res.data?.ai_signals?.weak_topics || [],
+            weak_topics: res.data?.ai_signals?.weak_topics || res.data?.weak_topics || [],
           },
         });
       } catch (err) {
@@ -47,8 +56,12 @@ const Recommendations = () => {
     fetchRecommendations();
   }, [isAuthenticated, user?.id]);
 
-  const hasItems = data.recommended_courses.length > 0 || data.recommended_lessons.length > 0;
-  const weakTopics = data.ai_signals?.weak_topics || [];
+  const hasItems =
+    Boolean(data.next_quiz) ||
+    data.recommended_quizzes.length > 0 ||
+    data.recommended_courses.length > 0 ||
+    data.recommended_lessons.length > 0;
+  const weakTopics = (data.weak_topics && data.weak_topics.length ? data.weak_topics : data.ai_signals?.weak_topics) || [];
 
   return (
     <section className="student-dashboard-panel recommendation-panel">
@@ -65,6 +78,19 @@ const Recommendations = () => {
             </span>
           ))}
         </div>
+      ) : null}
+
+      {data.next_quiz ? (
+        <article className="recommendation-card recommendation-card--next mb-3">
+          <div className="recommendation-card__tag">Next Quiz</div>
+          <Link className="recommendation-card__title" to={`/quiz?quizId=${data.next_quiz.id}`}>
+            {data.next_quiz.title}
+          </Link>
+          <p className="recommendation-card__reason mb-2">{data.next_quiz.reason}</p>
+          <div className="small text-muted">
+            Topic: {data.next_quiz.topic} • Difficulty: {data.next_quiz.difficulty}
+          </div>
+        </article>
       ) : null}
 
       {loading ? <div className="text-muted">Loading recommendations...</div> : null}
@@ -94,6 +120,21 @@ const Recommendations = () => {
               </details>
             </article>
           ))}
+
+          {data.recommended_quizzes
+            .filter((quiz) => !data.next_quiz || quiz.id !== data.next_quiz.id)
+            .map((quiz) => (
+              <article className="recommendation-card" key={`quiz-${quiz.id}`}>
+                <div className="recommendation-card__tag recommendation-card__tag--lesson">Quiz</div>
+                <Link className="recommendation-card__title" to={`/quiz?quizId=${quiz.id}`}>
+                  {quiz.title}
+                </Link>
+                <p className="recommendation-card__reason">{quiz.reason}</p>
+                <div className="small text-muted">
+                  Topic: {quiz.topic} • Difficulty: {quiz.difficulty}
+                </div>
+              </article>
+            ))}
 
           {data.recommended_lessons.map((lesson) => (
             <article className="recommendation-card" key={`lesson-${lesson.lesson_id}`}>

@@ -1,7 +1,62 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from database import db
 from models import LearningActivity, User
+
+
+def _resolve_timezone(user_timezone: str | None):
+    tz_name = (user_timezone or "").strip()
+    if not tz_name:
+        return timezone.utc
+
+    try:
+        return ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        return timezone.utc
+
+
+def _normalize_utc_datetime(activity_dt: datetime | None = None) -> datetime:
+    if activity_dt is None:
+        return datetime.now(timezone.utc)
+
+    if activity_dt.tzinfo is None:
+        return activity_dt.replace(tzinfo=timezone.utc)
+
+    return activity_dt.astimezone(timezone.utc)
+
+
+def update_user_streak(
+    user: User,
+    activity_dt: datetime | None = None,
+    user_timezone: str | None = None,
+) -> dict:
+    now_utc = _normalize_utc_datetime(activity_dt)
+    tz_info = _resolve_timezone(user_timezone)
+    activity_day = now_utc.astimezone(tz_info).date()
+
+    previous_day = user.last_active_date
+    current_streak = user.streak_count or 0
+
+    if previous_day is None:
+        current_streak = 1
+    elif previous_day == activity_day:
+        current_streak = max(current_streak, 1)
+    elif previous_day == (activity_day - timedelta(days=1)):
+        current_streak += 1
+    else:
+        current_streak = 1
+
+    user.streak_count = current_streak
+    user.daily_streak = current_streak
+    user.last_active_date = activity_day
+    user.longest_streak = max(user.longest_streak or 0, current_streak)
+
+    return {
+        "current_streak": user.streak_count,
+        "longest_streak": user.longest_streak,
+        "last_active_date": user.last_active_date.isoformat() if user.last_active_date else None,
+    }
 
 
 def calculate_learning_streak(user_id: int) -> int:
@@ -39,9 +94,14 @@ def calculate_learning_streak(user_id: int) -> int:
     return streak
 
 
-def record_learning_activity(user_id: int, activity_dt: datetime | None = None) -> dict:
-    now = activity_dt or datetime.utcnow()
-    activity_day = now.date()
+def record_learning_activity(
+    user_id: int,
+    activity_dt: datetime | None = None,
+    user_timezone: str | None = None,
+    auto_commit: bool = True,
+) -> dict:
+    now_utc = _normalize_utc_datetime(activity_dt)
+    activity_day = now_utc.date()
 
     existing = LearningActivity.query.filter_by(
         user_id=user_id,
@@ -54,19 +114,29 @@ def record_learning_activity(user_id: int, activity_dt: datetime | None = None) 
         db.session.flush()
         inserted = True
 
-    streak = calculate_learning_streak(user_id)
-
     user = User.query.get(user_id)
+    streak_info = {
+        "current_streak": 0,
+        "longest_streak": 0,
+        "last_active_date": None,
+    }
     if user:
-        user.daily_streak = streak
-        user.last_daily_completed_at = now
+        streak_info = update_user_streak(
+            user=user,
+            activity_dt=now_utc,
+            user_timezone=user_timezone,
+        )
+        user.last_daily_completed_at = now_utc.replace(tzinfo=None)
 
-    db.session.commit()
+    if auto_commit:
+        db.session.commit()
 
     return {
         "activity_recorded": inserted,
         "activity_date": activity_day.isoformat(),
-        "streak_days": streak,
+        "streak_days": streak_info["current_streak"],
+        "longest_streak": streak_info["longest_streak"],
+        "last_active_date": streak_info["last_active_date"],
     }
 
 
