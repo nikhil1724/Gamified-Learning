@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const resolveBaseApiUrl = () => {
+export const resolveBaseApiUrl = () => {
   const envApiUrl = (process.env.REACT_APP_API_URL || "").trim();
   if (envApiUrl) {
     return envApiUrl;
@@ -34,6 +34,31 @@ export const publicApi = axios.create({
   timeout: 15000,
 });
 
+export const getApiErrorMessage = (error, fallback = "Request failed.") => {
+  if (!error) {
+    return fallback;
+  }
+
+  const response = error.response?.data;
+  if (typeof response === "string" && response.trim()) {
+    return response;
+  }
+
+  if (response?.message) {
+    return response.message;
+  }
+
+  if (response?.error) {
+    return response.error;
+  }
+
+  if (error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -57,11 +82,13 @@ publicApi.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    if (error?.response?.status === 401 || error?.response?.status === 422) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.dispatchEvent(new Event("auth:logout"));
     }
+
+    error.userMessage = getApiErrorMessage(error);
     return Promise.reject(error);
   }
 );

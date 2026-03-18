@@ -156,7 +156,7 @@ def create_app() -> Flask:
                     "message": reason,
                 }
             ),
-            422,
+            401,
         )
 
     @jwt.expired_token_loader

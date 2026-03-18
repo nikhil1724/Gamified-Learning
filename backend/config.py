@@ -49,6 +49,21 @@ def _build_database_uri() -> str:
 
 
 def _parse_cors_origins(value: str):
+    def _normalize_origin_pattern(origin: str) -> str:
+        if "*" not in origin:
+            return origin
+
+        escaped = ""
+        for ch in origin:
+            if ch == "*":
+                escaped += ".*"
+            elif ch in ".^$+?{}[]|()":
+                escaped += f"\\{ch}"
+            else:
+                escaped += ch
+
+        return f"^{escaped}$"
+
     required_origins = {
         "https://gamified-learning-flame.vercel.app",
         "https://gamified-learning.vercel.app",
@@ -66,7 +81,7 @@ def _parse_cors_origins(value: str):
         normalized = origin.strip()
         if not normalized:
             continue
-        parsed_origins.append(normalized)
+        parsed_origins.append(_normalize_origin_pattern(normalized))
 
     # Allow explicit Vercel preview patterns by preserving wildcard-like entries.
     # Example CORS_ORIGINS: https://my-app.vercel.app,https://*.vercel.app
@@ -132,6 +147,9 @@ class Config:
     OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "5"))
     OTP_RESEND_MAX_ATTEMPTS = int(os.getenv("OTP_RESEND_MAX_ATTEMPTS", "3"))
     OTP_RESEND_WINDOW_MINUTES = int(os.getenv("OTP_RESEND_WINDOW_MINUTES", "15"))
+    OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "60"))
+    OTP_VERIFY_MAX_ATTEMPTS = int(os.getenv("OTP_VERIFY_MAX_ATTEMPTS", "5"))
+    OTP_VERIFY_LOCK_MINUTES = int(os.getenv("OTP_VERIFY_LOCK_MINUTES", "10"))
     VERIFICATION_TOKEN_EXPIRY_HOURS = int(os.getenv("VERIFICATION_TOKEN_EXPIRY_HOURS", "24"))
 
     # Legacy user migration settings

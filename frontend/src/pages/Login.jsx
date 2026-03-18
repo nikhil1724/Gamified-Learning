@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import PageTransition from "../components/PageTransition";
-import api from "../services/api";
+import api, { getApiErrorMessage } from "../services/api";
 import "./Login.css";
 
 const Login = () => {
@@ -87,11 +87,14 @@ const Login = () => {
       login(token, user);
       navigate(getRoleHome(user?.role, user?.is_approved), { replace: true });
     } catch (err) {
-      const message = err?.response?.data?.error || "Login failed.";
+      const message = getApiErrorMessage(err, "Login failed.");
       setError(message);
       
       // Check if email is not verified
-      if (err?.response?.status === 403 && err?.response?.data?.email_verified === false) {
+      if (
+        (err?.response?.status === 401 || err?.response?.status === 403) &&
+        (err?.response?.data?.email_verified === false || err?.response?.data?.error === "EMAIL_NOT_VERIFIED")
+      ) {
         setEmailNotVerified(true);
         setUnverifiedEmail(formData.email);
       } else {

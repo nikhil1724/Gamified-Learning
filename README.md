@@ -273,11 +273,25 @@ What it verifies:
 - `/api/login` returns an expected auth error (not server error).
 - `/api/register` returns success/conflict (not server error).
 
+## ✅ API Contract Check
+
+Run this command from the project root to validate frontend API usage against backend route contracts and perform live endpoint checks:
+
+```bash
+npm run contract:check
+```
+
+What it verifies:
+- Every frontend `api.get/post/put/patch/delete` call maps to a backend Flask route.
+- Live backend responses for discovered frontend endpoints do not return `5xx` or `405`.
+- Auth-required endpoints correctly return auth errors when called without a token.
+- Core auth endpoints (`/api/login`, `/api/register`) return expected status codes.
+
 ## 📝 API Documentation
 
 ### Authentication Endpoints
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
+- `POST /api/register` - Register new user
+- `POST /api/login` - User login
 - `POST /api/auth/logout` - User logout
 
 ### Course Endpoints

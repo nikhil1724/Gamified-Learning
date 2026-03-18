@@ -33,7 +33,12 @@ const courseData = {
 const LessonPage = () => {
   const { course, lesson } = useParams();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth <= 992 : false
+  );
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth > 992 : true
+  );
   const [currentCourse, setCurrentCourse] = useState(null);
   const [currentLesson, setCurrentLesson] = useState(null);
   const [completedLessons, setCompletedLessons] = useState([]);
@@ -66,6 +71,66 @@ const LessonPage = () => {
     }
   }, [course, lesson]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 992px)');
+
+    const applyResponsiveSidebarState = (isMobile) => {
+      setIsMobileView(isMobile);
+      setSidebarOpen(!isMobile);
+    };
+
+    applyResponsiveSidebarState(mediaQuery.matches);
+
+    const handleViewportChange = (event) => {
+      applyResponsiveSidebarState(event.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleViewportChange);
+    } else {
+      mediaQuery.addListener(handleViewportChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleViewportChange);
+      } else {
+        mediaQuery.removeListener(handleViewportChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMobileView && sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+
+    document.body.style.overflow = '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileView, sidebarOpen]);
+
+  useEffect(() => {
+    if (!isMobileView || !sidebarOpen) {
+      return undefined;
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMobileView, sidebarOpen]);
+
   const handleMarkComplete = async () => {
     try {
       await api.post(`/lesson-progress/${course}/${lesson}`);
@@ -78,6 +143,23 @@ const LessonPage = () => {
 
   const handleLessonChange = (lessonId) => {
     navigate(`/course/${course}/${lessonId}`);
+    if (isMobileView) {
+      setSidebarOpen(false);
+    }
+  };
+
+  const handleSidebarContainerClick = (event) => {
+    if (!isMobileView) {
+      return;
+    }
+
+    const interactiveElement = event.target.closest(
+      '.sidebar-header a, .sidebar-header button, .sidebar-footer a, .sidebar-footer button'
+    );
+
+    if (interactiveElement) {
+      setSidebarOpen(false);
+    }
   };
 
   const handlePrevious = () => {
@@ -128,13 +210,26 @@ const LessonPage = () => {
         <button 
           className="sidebar-toggle"
           onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-expanded={sidebarOpen}
           aria-label="Toggle sidebar"
         >
           <i className={`bi bi-${sidebarOpen ? 'x' : 'list'}`}></i>
         </button>
 
+        {isMobileView && (
+          <button
+            className={`sidebar-backdrop ${sidebarOpen ? 'open' : ''}`}
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close lesson sidebar"
+            type="button"
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className={`lesson-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <aside
+          className={`lesson-sidebar ${sidebarOpen ? 'open' : ''}`}
+          onClick={handleSidebarContainerClick}
+        >
           <div className="sidebar-header">
             <div className="course-badge" style={{ background: currentCourse.color }}>
               <span className="course-icon">{currentCourse.icon}</span>

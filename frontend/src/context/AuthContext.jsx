@@ -2,6 +2,22 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 
 const AuthContext = createContext(null);
 
+const decodeJwtPayload = (jwtToken) => {
+  const payloadSegment = jwtToken.split(".")[1];
+  if (!payloadSegment) {
+    return null;
+  }
+
+  const normalized = payloadSegment.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+
+  try {
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+};
+
 const getStoredToken = () => localStorage.getItem("token");
 const getStoredUser = () => {
   try {
@@ -23,16 +39,16 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
-    try {
-      const payload = jwtToken.split(".")[1];
-      const decoded = JSON.parse(atob(payload));
-      if (!decoded.exp) {
-        return true;
-      }
-      return Date.now() < decoded.exp * 1000;
-    } catch {
+    const decoded = decodeJwtPayload(jwtToken);
+    if (!decoded) {
       return false;
     }
+
+    if (!decoded.exp) {
+      return true;
+    }
+
+    return Date.now() < decoded.exp * 1000;
   };
 
   // Load token & user from localStorage on mount

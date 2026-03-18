@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
-import api from "../services/api";
+import api, { getApiErrorMessage } from "../services/api";
 import "./Register.css";
 
 const Register = () => {
@@ -23,7 +23,6 @@ const Register = () => {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
-  const [verificationOtp, setVerificationOtp] = useState("");
 
   useEffect(() => {
     if (isTeacherRegister) {
@@ -77,13 +76,12 @@ const Register = () => {
       if (response.data.email_verification_required) {
         setRegistrationSuccess(true);
         setRegisteredEmail(formData.email);
-        setVerificationOtp(response.data.verification_otp || "");
       } else {
         // If verification not required, redirect to login
         navigate("/login", { replace: true });
       }
     } catch (err) {
-      const message = err?.response?.data?.error || "Registration failed.";
+      const message = getApiErrorMessage(err, "Registration failed.");
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -143,14 +141,6 @@ const Register = () => {
           <p className="success-instructions">
             Enter the OTP on the verification screen to activate your account.
           </p>
-          {verificationOtp ? (
-            <div className="alert alert-warning mt-3">
-              <p className="mb-2">
-                Email service is not configured on this server. Use this OTP:
-              </p>
-              <strong>{verificationOtp}</strong>
-            </div>
-          ) : null}
           <div className="success-tips">
             <p className="text-muted small mb-2"><strong>Didn't receive the email?</strong></p>
             <ul className="text-muted small">
@@ -160,7 +150,7 @@ const Register = () => {
             </ul>
           </div>
           <div className="success-actions">
-            <Link to="/verify-otp" state={{ email: registeredEmail, otp: verificationOtp }} className="btn btn-primary">
+            <Link to="/verify-otp" state={{ email: registeredEmail }} className="btn btn-primary">
               Enter OTP
             </Link>
             <Link to="/resend-otp" state={{ email: registeredEmail }} className="btn btn-outline-primary">

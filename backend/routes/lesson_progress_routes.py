@@ -39,6 +39,11 @@ def _is_instructor(user):
     return bool(user and user.role in {"teacher", "admin"} and (user.role == "admin" or user.is_approved))
 
 
+def _internal_error_response(endpoint_name: str, error: Exception):
+    current_app.logger.exception("Lesson progress endpoint failed (%s): %s", endpoint_name, error)
+    return jsonify({"error": "Internal server error"}), 500
+
+
 def _draw_centered_fitted_text(c, text: str, y: float, max_width: float, font_name: str, start_size: int, min_size: int = 14):
     size = start_size
     clean = (text or "").strip() or "-"
@@ -212,7 +217,7 @@ def mark_lesson_complete(course, lesson_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return _internal_error_response("mark_lesson_complete", e)
 
 @lesson_progress_bp.route('/api/lesson-progress/<course>', methods=['GET'])
 @jwt_required()
@@ -242,7 +247,7 @@ def get_course_progress(course):
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _internal_error_response("get_course_progress", e)
 
 @lesson_progress_bp.route('/api/lesson-progress', methods=['GET'])
 @jwt_required()
@@ -271,7 +276,7 @@ def get_all_progress():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _internal_error_response("get_all_progress", e)
 
 @lesson_progress_bp.route('/api/lesson-progress/<course>/<int:lesson_id>', methods=['DELETE'])
 @jwt_required()
@@ -301,7 +306,7 @@ def unmark_lesson(course, lesson_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return _internal_error_response("unmark_lesson", e)
 
 
 @lesson_progress_bp.route('/api/courses/<int:course_id>/lessons/<int:lesson_id>/complete', methods=['POST'])
@@ -352,7 +357,7 @@ def mark_lesson_complete_by_course_id(course_id, lesson_id):
         ), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return _internal_error_response("mark_lesson_complete_by_course_id", e)
 
 
 @lesson_progress_bp.route('/api/courses/<int:course_id>/progress', methods=['GET'])
@@ -389,7 +394,7 @@ def get_course_progress_by_id(course_id):
             }
         ), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _internal_error_response("get_course_progress_by_id", e)
 
 
 @lesson_progress_bp.route('/api/learning-dashboard', methods=['GET'])
@@ -488,7 +493,7 @@ def get_learning_dashboard():
             }
         ), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _internal_error_response("get_learning_dashboard", e)
 
 
 @lesson_progress_bp.route('/api/lesson/complete', methods=['POST'])

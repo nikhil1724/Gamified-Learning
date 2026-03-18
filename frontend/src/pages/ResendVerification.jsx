@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { publicApi } from "../services/api";
 import "./ResendVerification.css";
@@ -8,7 +8,21 @@ const ResendVerification = () => {
   const [email, setEmail] = useState(location.state?.email || "");
   const [status, setStatus] = useState("idle"); // idle, loading, success, error
   const [message, setMessage] = useState("");
-  const [verificationOtp, setVerificationOtp] = useState("");
+  const [retryAfter, setRetryAfter] = useState(0);
+
+  useEffect(() => {
+    if (retryAfter <= 0) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setRetryAfter((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [retryAfter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,19 +33,28 @@ const ResendVerification = () => {
       return;
     }
 
+    if (retryAfter > 0) {
+      setStatus("error");
+      setMessage(`Please wait ${retryAfter}s before requesting another OTP.`);
+      return;
+    }
+
     setStatus("loading");
     setMessage("");
-    setVerificationOtp("");
 
     try {
       const response = await publicApi.post("/resend-verification", { email });
       setStatus("success");
       setMessage(response.data.message);
-      setVerificationOtp(response.data.verification_otp || "");
     } catch (error) {
+      const cooldown = Number(error?.response?.data?.retry_after_seconds || 0);
+      if (cooldown > 0) {
+        setRetryAfter(cooldown);
+      }
       setStatus("error");
       setMessage(
-        error.response?.data?.error ||
+        error.response?.data?.message ||
+          error.response?.data?.error ||
           "Failed to send verification email. Please try again."
       );
     }
@@ -71,24 +94,18 @@ const ResendVerification = () => {
             </div>
           )}
 
-          {verificationOtp ? (
-            <div className="message-box success">
-              <p className="mb-2">Use this OTP:</p>
-              <p><strong>{verificationOtp}</strong></p>
-              <Link to="/verify-otp" state={{ email, otp: verificationOtp }} className="link">Go to OTP Verification</Link>
-            </div>
-          ) : null}
-
           <button
             type="submit"
             className="submit-btn"
-            disabled={status === "loading"}
+            disabled={status === "loading" || retryAfter > 0}
           >
             {status === "loading" ? (
               <>
                 <span className="spinner-small"></span>
                 Sending...
               </>
+            ) : retryAfter > 0 ? (
+              `Retry in ${retryAfter}s`
             ) : (
               "Send Verification OTP"
             )}

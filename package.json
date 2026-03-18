@@ -1,6 +1,8 @@
 {
   "scripts": {
     "deploy:check": "python scripts/check_deploy_health.py --frontend https://gamified-learning-flame.vercel.app --backend https://gamified-learning.onrender.com",
+    "contract:check": "python scripts/check_api_contract.py --workspace . --backend https://gamified-learning.onrender.com",
+    "test:otp": "python -m unittest backend.tests.test_otp_flow -v",
     "demo:progress": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location backend; & ..\\.venv\\Scripts\\python.exe .\\apply_db_migration_student_progress.py; & ..\\.venv\\Scripts\\python.exe .\\seed_student_progress_demo.py\"",
     "demo:progress:migrate": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location backend; & ..\\.venv\\Scripts\\python.exe .\\apply_db_migration_student_progress.py\"",
     "demo:progress:seed": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location backend; & ..\\.venv\\Scripts\\python.exe .\\seed_student_progress_demo.py\""

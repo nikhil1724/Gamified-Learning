@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { publicApi } from "../services/api";
 import "./VerifyEmailOTP.css";
@@ -7,18 +7,30 @@ const VerifyEmailOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState(location.state?.email || "");
-  const [otp, setOtp] = useState(location.state?.otp || "");
+  const [otp, setOtp] = useState("");
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setResendCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [resendCooldown]);
 
   useEffect(() => {
     if (!email && location.state?.email) {
       setEmail(location.state.email);
     }
-    if (!otp && location.state?.otp) {
-      setOtp(location.state.otp);
-    }
-  }, [email, otp, location.state]);
+  }, [email, location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +39,12 @@ const VerifyEmailOTP = () => {
     if (!email || !otp) {
       setStatus("error");
       setMessage("Email and OTP are required.");
+      return;
+    }
+
+    if (otp.length !== 6) {
+      setStatus("error");
+      setMessage("OTP must be exactly 6 digits.");
       return;
     }
 
@@ -48,6 +66,38 @@ const VerifyEmailOTP = () => {
       );
     }
   };
+
+  const handleResendOtp = async () => {
+    if (!email || resendCooldown > 0) {
+      return;
+    }
+
+    try {
+      setStatus("loading");
+      const response = await publicApi.post("/resend-otp", { email });
+      setStatus("success");
+      setMessage(response.data?.message || "Verification OTP sent.");
+      setResendCooldown(60);
+    } catch (error) {
+      const retryAfter = Number(error?.response?.data?.retry_after_seconds || 0);
+      if (retryAfter > 0) {
+        setResendCooldown(retryAfter);
+      }
+      setStatus("error");
+      setMessage(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to resend OTP."
+      );
+    }
+  };
+
+  const resendLabel = useMemo(() => {
+    if (resendCooldown > 0) {
+      return `Resend OTP in ${resendCooldown}s`;
+    }
+    return "Resend OTP";
+  }, [resendCooldown]);
 
   return (
     <div className="verify-otp-page">
@@ -94,9 +144,14 @@ const VerifyEmailOTP = () => {
         </form>
 
         <div className="actions">
-          <Link to="/resend-otp" state={{ email }}>
-            Resend OTP
-          </Link>
+          <button
+            type="button"
+            className="resend-otp-btn"
+            onClick={handleResendOtp}
+            disabled={status === "loading" || resendCooldown > 0 || !email}
+          >
+            {resendLabel}
+          </button>
           <Link to="/login/student">Back to Login</Link>
         </div>
       </div>

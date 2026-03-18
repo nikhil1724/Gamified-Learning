@@ -1,9 +1,10 @@
 import { io } from "socket.io-client";
+import { resolveBaseApiUrl } from "./api";
 
 let socketInstance = null;
 
 const getSocketBaseUrl = () => {
-  const rawApiUrl = process.env.REACT_APP_API_URL || "http://127.0.0.1:5000";
+  const rawApiUrl = resolveBaseApiUrl();
   const normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
 
   if (normalizedApiUrl.endsWith("/api")) {

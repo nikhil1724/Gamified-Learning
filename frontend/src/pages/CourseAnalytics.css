@@ -657,11 +657,12 @@
   }
 
   .students-table-wrapper {
-    overflow-x: scroll;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .students-table {
-    min-width: 800px;
+    min-width: 640px;
   }
 
   .quizzes-grid {
