@@ -12,6 +12,11 @@ export const resolveBaseApiUrl = () => {
       return "http://127.0.0.1:5000";
     }
 
+    // Default Vercel frontend deployments to the hosted backend.
+    if (host.endsWith("vercel.app")) {
+      return "https://gamified-learning.onrender.com";
+    }
+
     return window.location.origin;
   }
 
@@ -26,17 +31,21 @@ const baseURL = normalizedApiUrl.endsWith("/api")
 
 const api = axios.create({
   baseURL,
-  timeout: 15000,
+  timeout: 30000,
 });
 
 export const publicApi = axios.create({
   baseURL,
-  timeout: 15000,
+  timeout: 30000,
 });
 
 export const getApiErrorMessage = (error, fallback = "Request failed.") => {
   if (!error) {
     return fallback;
+  }
+
+  if (error.code === "ECONNABORTED" || /timeout/i.test(error.message || "")) {
+    return "Server is taking longer than expected. Please try again in a few seconds.";
   }
 
   const response = error.response?.data;
