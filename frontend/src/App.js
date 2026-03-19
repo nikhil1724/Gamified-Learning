@@ -38,10 +38,6 @@ import TeacherStudents from "./pages/TeacherStudents";
 import StudentPerformanceDetail from "./pages/StudentPerformanceDetail";
 import CourseAnalytics from "./pages/CourseAnalytics";
 import InstructorAnalytics from "./pages/InstructorAnalytics";
-import VerifyEmail from "./pages/VerifyEmail";
-import VerifyOTP from "./pages/VerifyOTP";
-import VerifyEmailOTP from "./pages/VerifyEmailOTP";
-import ResendVerification from "./pages/ResendVerification";
 const StudentDashboard = lazy(() => import("./pages/StudentDashboard"));
 const InstructorDashboard = lazy(() => import("./pages/InstructorDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -92,17 +88,12 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
             )
           }
         />
-        <Route path="/login" element={<Navigate to="/role-select" replace />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/login/student" element={<Login />} />
         <Route path="/login/teacher" element={<Login />} />
         <Route path="/login/admin" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/register/teacher" element={<Register />} />
-        <Route path="/verify-email/:token" element={<VerifyEmail />} />
-        <Route path="/verify-otp" element={<VerifyOTP />} />
-        <Route path="/verify-email-otp" element={<VerifyEmailOTP />} />
-        <Route path="/resend-otp" element={<ResendVerification />} />
-        <Route path="/resend-verification" element={<ResendVerification />} />
         <Route
           path="/home"
           element={<Navigate to={getRoleHome(role, isApproved)} replace />}

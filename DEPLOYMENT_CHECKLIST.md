@@ -44,20 +44,6 @@ FLASK_DEBUG=0
 
 # CORS (update with your actual domains)
 CORS_ORIGINS=https://gamified-learning-flame.vercel.app,https://gamified-learning.vercel.app,https://your-preview.vercel.app
-
-# Email (if using)
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=<your-email>
-MAIL_PASSWORD=<your-app-password>
-MAIL_USE_TLS=true
-
-# App URLs
-APP_URL=https://gamified-learning-flame.vercel.app
-
-# Optional: Email verification
-EMAIL_VERIFICATION_REQUIRED=true
-OTP_EXPIRY_MINUTES=5
 ```
 
 **Critical fields that changed:**

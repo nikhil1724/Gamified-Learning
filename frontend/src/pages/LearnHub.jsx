@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
 import ProgressBar from '../components/ProgressBar';
 import api from '../services/api';
@@ -93,178 +94,191 @@ const LearnHub = () => {
     <PageTransition>
       <div className="learn-hub">
         {/* Hero Section */}
-        <div className="learn-hero">
-          <div className="learn-hub__container learn-hero-content">
-            <h1 className="learn-hero-title">
-              <span className="learn-gradient-text">Learn to Code</span>
-            </h1>
-            <p className="learn-hero-subtitle">
-              Master programming with our interactive lessons, hands-on practice, and real-world projects.
-            </p>
-            <div className="learn-hero-stats">
-              <div className="learn-stat-item">
-                <i className="bi bi-book-fill"></i>
-                <div>
-                  <strong>5+ Courses</strong>
-                  <span>Available</span>
-                </div>
+        <section className="learn-hero">
+          <div className="learn-hub__container">
+            <motion.div
+              className="learn-hero-content"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="learn-hero-title">
+                Level Up Your <span className="learn-highlight">Coding Skills</span>
+              </h1>
+              <p className="learn-hero-subtitle">
+                Master programming with interactive lessons, hands-on practice, and real-world projects from industry experts.
+              </p>
+              <div className="learn-hero-buttons">
+                <Link to="/course/python/lessons" className="btn btn-hero-primary">
+                  Start Learning
+                </Link>
+                <button className="btn btn-hero-secondary" onClick={() => document.querySelector('.courses-section').scrollIntoView({ behavior: 'smooth' })}>
+                  Explore Courses
+                </button>
               </div>
-              <div className="learn-stat-item">
-                <i className="bi bi-people-fill"></i>
-                <div>
-                  <strong>2,200+</strong>
-                  <span>Students</span>
-                </div>
-              </div>
-              <div className="learn-stat-item">
-                <i className="bi bi-trophy-fill"></i>
-                <div>
-                  <strong>1,000+</strong>
-                  <span>Challenges</span>
-                </div>
-              </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </section>
+
+
 
         {/* Search and Filters */}
-        <div className="learn-controls">
+        <section className="learn-controls-section">
           <div className="learn-hub__container">
-            <div className="search-bar">
-              <i className="bi bi-search"></i>
-              <input
-                type="text"
-                placeholder="Search courses..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+            <div className="learn-controls">
+              <div className="search-bar">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                  <circle cx="9" cy="9" r="7"></circle>
+                  <path d="m14 14 4 4"></path>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search courses by name or topic..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+              </div>
 
-            <div className="filter-buttons">
-              <button
-                className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-                onClick={() => setFilter('all')}
-              >
-                All Courses
-              </button>
-              <button
-                className={`filter-btn ${filter === 'beginner' ? 'active' : ''}`}
-                onClick={() => setFilter('beginner')}
-              >
-                Beginner
-              </button>
-              <button
-                className={`filter-btn ${filter === 'intermediate' ? 'active' : ''}`}
-                onClick={() => setFilter('intermediate')}
-              >
-                Intermediate
-              </button>
-              <button
-                className={`filter-btn ${filter === 'advanced' ? 'active' : ''}`}
-                onClick={() => setFilter('advanced')}
-              >
-                Advanced
-              </button>
+              <div className="filter-buttons">
+                <button
+                  className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+                  onClick={() => setFilter('all')}
+                >
+                  All Courses
+                </button>
+                <button
+                  className={`filter-btn ${filter === 'beginner' ? 'active' : ''}`}
+                  onClick={() => setFilter('beginner')}
+                >
+                  Beginner
+                </button>
+                <button
+                  className={`filter-btn ${filter === 'intermediate' ? 'active' : ''}`}
+                  onClick={() => setFilter('intermediate')}
+                >
+                  Intermediate
+                </button>
+                <button
+                  className={`filter-btn ${filter === 'advanced' ? 'active' : ''}`}
+                  onClick={() => setFilter('advanced')}
+                >
+                  Advanced
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Courses Grid */}
-        <div className="learn-hub__container">
-          <div className="courses-grid">
-            {filteredCourses.map(course => (
-              <div key={course.id} className="course-card">
-                <div className="course-header" style={{ background: course.color }}>
-                  <div className="course-icon-large">{course.icon}</div>
-                  {course.comingSoon && (
-                    <div className="coming-soon-badge">Coming Soon</div>
-                  )}
-                </div>
+        <section className="courses-section" ref={(el) => { if (el) window.coursesSection = el; }}>
+          <div className="learn-hub__container">
+            <div className="courses-header">
+              <h2 className="courses-title">
+                {filter === 'all' ? 'All Courses' : `${filter.charAt(0).toUpperCase() + filter.slice(1)} Courses`}
+              </h2>
+              <p className="courses-subtitle">
+                {filteredCourses.length} course{filteredCourses.length !== 1 ? 's' : ''} available
+              </p>
+            </div>
 
-                <div className="course-body">
-                  <div className="course-title-section">
-                    <h3>{course.name}</h3>
-                    <span className={`level-badge ${course.level.toLowerCase()}`}>
-                      {course.level}
-                    </span>
-                  </div>
-
-                  <p className="course-description">{course.description}</p>
-
-                  <div className="course-meta">
-                    <div className="meta-row">
-                      <span>
-                        <i className="bi bi-journal-text"></i>
-                        {course.lessons} lessons
-                      </span>
-                      <span>
-                        <i className="bi bi-clock"></i>
-                        {course.duration}
-                      </span>
+            {filteredCourses.length > 0 ? (
+              <div className="courses-grid">
+                {filteredCourses.map((course, index) => (
+                  <motion.div
+                    key={course.id}
+                    className="course-card"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <div className="course-header" style={{ background: course.color }}>
+                      <div className="course-icon-large">{course.icon}</div>
+                      {course.comingSoon && (
+                        <div className="coming-soon-badge">Coming Soon</div>
+                      )}
                     </div>
-                    {!course.comingSoon && (
-                      <div className="meta-row">
-                        <span>
-                          <i className="bi bi-people"></i>
-                          {course.students.toLocaleString()} students
-                        </span>
-                        <span>
-                          <i className="bi bi-star-fill"></i>
-                          {course.rating} rating
+
+                    <div className="course-body">
+                      <div className="course-title-section">
+                        <h3>{course.name}</h3>
+                        <span className={`level-badge ${course.level.toLowerCase()}`}>
+                          {course.level}
                         </span>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="course-topics">
-                    {course.topics.slice(0, 3).map((topic, index) => (
-                      <span key={index} className="topic-tag">{topic}</span>
-                    ))}
-                    {course.topics.length > 3 && (
-                      <span className="topic-tag more">+{course.topics.length - 3} more</span>
-                    )}
-                  </div>
+                      <p className="course-description">{course.description}</p>
 
-                  {/* Progress Bar for started courses */}
-                  {!course.comingSoon && courseProgress[course.id] && courseProgress[course.id].length > 0 && (
-                    <div style={{ marginTop: '15px' }}>
-                      <ProgressBar 
-                        current={courseProgress[course.id].length} 
-                        total={course.lessons}
-                        size="small"
-                      />
+                      <div className="course-meta">
+                        <div className="meta-row">
+                          <span>
+                            <span className="meta-icon">📖</span>
+                            {course.lessons} lessons
+                          </span>
+                          <span>
+                            <span className="meta-icon">⏱️</span>
+                            {course.duration}
+                          </span>
+                        </div>
+                        {!course.comingSoon && (
+                          <div className="meta-row">
+                            <span>
+                              <span className="meta-icon">👥</span>
+                              {course.students.toLocaleString()} students
+                            </span>
+                            <span>
+                              <span className="meta-icon">⭐</span>
+                              {course.rating} rating
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="course-topics">
+                        {course.topics.slice(0, 3).map((topic, i) => (
+                          <span key={i} className="topic-tag">{topic}</span>
+                        ))}
+                        {course.topics.length > 3 && (
+                          <span className="topic-tag more">+{course.topics.length - 3} more</span>
+                        )}
+                      </div>
+
+                      {!course.comingSoon && courseProgress[course.id] && courseProgress[course.id].length > 0 && (
+                        <div className="course-progress-wrapper">
+                          <ProgressBar 
+                            current={courseProgress[course.id].length} 
+                            total={course.lessons}
+                            size="small"
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div className="course-footer">
-                  {course.comingSoon ? (
-                    <button className="btn-course disabled" disabled>
-                      <i className="bi bi-hourglass-split me-2"></i>
-                      Coming Soon
-                    </button>
-                  ) : (
-                    <Link 
-                      to={`/course/${course.id}/lessons`} 
-                      className="btn-course"
-                    >
-                      <i className={`bi ${courseProgress[course.id]?.length > 0 ? 'bi-arrow-right-circle-fill' : 'bi-play-circle-fill'} me-2`}></i>
-                      {courseProgress[course.id]?.length > 0 ? 'Continue Learning' : 'Start Learning'}
-                    </Link>
-                  )}
-                </div>
+                    <div className="course-footer">
+                      {course.comingSoon ? (
+                        <button className="btn btn-course disabled" disabled>
+                          Coming Soon
+                        </button>
+                      ) : (
+                        <Link 
+                          to={`/course/${course.id}/lessons`} 
+                          className="btn btn-course"
+                        >
+                          View Course
+                        </Link>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="no-courses">
+                <p>No courses found matching your criteria.</p>
+              </div>
+            )}
           </div>
-
-          {filteredCourses.length === 0 && (
-            <div className="no-results">
-              <i className="bi bi-search"></i>
-              <h3>No courses found</h3>
-              <p>Try adjusting your search or filters</p>
-            </div>
-          )}
-        </div>
+        </section>
       </div>
     </PageTransition>
   );

@@ -15,19 +15,12 @@ const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: isTeacherRegister ? "teacher" : "student",
     password: "",
     confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  useEffect(() => {
-    if (isTeacherRegister) {
-      setFormData((prev) => ({ ...prev, role: "teacher" }));
-    }
-  }, [isTeacherRegister]);
 
   useEffect(() => {
     if (isTeacherRegister && isAuthenticated) {
@@ -64,29 +57,13 @@ const Register = () => {
 
     try {
       setIsSubmitting(true);
-      const response = await registerUser({
+      await registerUser({
         name: formData.name,
         email: formData.email,
-        role: formData.role,
         password: formData.password,
       });
 
-      // Check if email verification is required
-      if (response.data.email_verification_required) {
-        navigate("/verify-otp", {
-          replace: true,
-          state: {
-            email: formData.email,
-            otpSentMessage:
-              response.data?.message ||
-              `OTP sent to your email (${formData.email})`,
-            resendCooldown: 30,
-          },
-        });
-      } else {
-        // If verification not required, redirect to login
-        navigate("/login", { replace: true });
-      }
+      navigate("/login/student", { replace: true });
     } catch (err) {
       const message = getApiErrorMessage(err, "Registration failed.");
       setError(message);
@@ -179,25 +156,6 @@ const Register = () => {
             <div className="text-danger small mt-1">{inlineErrors.email}</div>
           ) : null}
         </div>
-
-        {isTeacherRegister ? null : (
-          <div className="form-group">
-            <label htmlFor="role" className="form-label">
-              I am a
-            </label>
-            <select
-              id="role"
-              name="role"
-              className="form-control"
-              value={formData.role}
-              onChange={handleChange}
-              autoComplete="off"
-            >
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
-            </select>
-          </div>
-        )}
 
         <div className="form-group">
           <label htmlFor="password" className="form-label">

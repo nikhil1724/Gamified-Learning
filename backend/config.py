@@ -131,33 +131,5 @@ class Config:
         os.path.join(os.path.dirname(__file__), "uploads"),
     )
     
-    # Email configuration
-    APP_URL = os.getenv("APP_URL", "http://localhost:3000")
-    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
-    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
-    SMTP_TIMEOUT_SECONDS = int(os.getenv("SMTP_TIMEOUT_SECONDS", "8"))
-    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-    RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", os.getenv("MAIL_FROM_EMAIL", ""))
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", os.getenv("MAIL_FROM_EMAIL", "noreply@gamifiedlearning.com"))
-    MAIL_FROM_EMAIL = os.getenv("MAIL_FROM_EMAIL", MAIL_DEFAULT_SENDER)
-    MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "Gamified Learning Platform")
-    
-    # Email verification settings
-    EMAIL_VERIFICATION_REQUIRED = os.getenv("EMAIL_VERIFICATION_REQUIRED", "true").lower() == "true"
-    OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "5"))
-    OTP_RESEND_MAX_ATTEMPTS = int(os.getenv("OTP_RESEND_MAX_ATTEMPTS", "3"))
-    OTP_RESEND_WINDOW_MINUTES = int(os.getenv("OTP_RESEND_WINDOW_MINUTES", "15"))
-    OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "60"))
-    OTP_VERIFY_MAX_ATTEMPTS = int(os.getenv("OTP_VERIFY_MAX_ATTEMPTS", "5"))
-    OTP_VERIFY_LOCK_MINUTES = int(os.getenv("OTP_VERIFY_LOCK_MINUTES", "10"))
-    VERIFICATION_TOKEN_EXPIRY_HOURS = int(os.getenv("VERIFICATION_TOKEN_EXPIRY_HOURS", "24"))
-
-    # Legacy user migration settings
-    AUTO_VERIFY_LEGACY_USERS = os.getenv("AUTO_VERIFY_LEGACY_USERS", "false").lower() == "true"
-    LEGACY_VERIFICATION_CUTOFF = os.getenv("LEGACY_VERIFICATION_CUTOFF", "")
-
     # Disable startup DB mutations in production by default.
     RUN_STARTUP_TASKS = os.getenv("RUN_STARTUP_TASKS", "false").lower() == "true"

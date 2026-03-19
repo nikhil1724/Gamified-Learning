@@ -1,10 +1,9 @@
 import logging
 import os
-from datetime import datetime
 
 import click
+import bcrypt
 from werkzeug.exceptions import HTTPException
-from werkzeug.security import generate_password_hash
 
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
@@ -35,58 +34,6 @@ from routes.badge_routes import badge_bp
 from socketio_service import init_socketio, socketio
 from seed_data import seed_quiz_data
 from models import User
-
-
-def _auto_verify_legacy_users(app: Flask) -> None:
-    if not app.config.get("AUTO_VERIFY_LEGACY_USERS"):
-        return
-
-    cutoff_raw = (app.config.get("LEGACY_VERIFICATION_CUTOFF") or "").strip()
-    if not cutoff_raw:
-        app.logger.warning(
-            "AUTO_VERIFY_LEGACY_USERS is enabled but LEGACY_VERIFICATION_CUTOFF is empty. Skipping migration."
-        )
-        return
-
-    try:
-        cutoff_dt = datetime.strptime(cutoff_raw, "%Y-%m-%d")
-    except ValueError:
-        app.logger.warning(
-            "Invalid LEGACY_VERIFICATION_CUTOFF format '%s'. Use YYYY-MM-DD.",
-            cutoff_raw,
-        )
-        return
-
-    updated = (
-        User.query.filter(
-            User.email_verified.is_(False),
-            User.created_at < cutoff_dt,
-        )
-        .update(
-            {
-                User.is_verified: True,
-                User.email_verified: True,
-                User.otp_code: None,
-                User.otp_expiry: None,
-                User.verification_token: None,
-                User.verification_token_expiry: None,
-            },
-            synchronize_session=False,
-        )
-    )
-    db.session.commit()
-
-    if updated:
-        app.logger.info(
-            "Legacy auto-verification applied: %s users created before %s were marked verified.",
-            updated,
-            cutoff_raw,
-        )
-    else:
-        app.logger.info(
-            "Legacy auto-verification checked: no matching users before %s.",
-            cutoff_raw,
-        )
 
 
 def create_app() -> Flask:
@@ -177,7 +124,6 @@ def create_app() -> Flask:
             # Optional bootstrap for local/dev only.
             db.create_all()
             seed_quiz_data()
-        _auto_verify_legacy_users(app)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
@@ -283,7 +229,7 @@ def create_app() -> Flask:
         user = User(
             name=name.strip(),
             email=email.strip().lower(),
-            password_hash=generate_password_hash(password),
+            password_hash=bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
             role="admin",
             is_approved=True,
         )

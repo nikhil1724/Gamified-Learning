@@ -241,7 +241,6 @@ def _is_safe_to_probe_without_payload(path: str, method: str) -> bool:
         return False
     deny_fragments = (
         "/uploads/",
-        "/verify-email/",
     )
     return not any(fragment in path for fragment in deny_fragments)
 
@@ -278,7 +277,6 @@ def run_live_contract_checks(
         payload={
             "name": "Contract Check",
             "email": "contractcheck_existing@example.com",
-            "role": "student",
             "password": "Test@1234",
         },
         timeout=timeout,

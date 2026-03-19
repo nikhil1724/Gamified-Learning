@@ -14,8 +14,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [emailNotVerified, setEmailNotVerified] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const getRoleHome = (userRole, approvalState) => {
     if (!userRole) {
@@ -45,7 +43,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(getRoleHome(role, isApproved), { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, role, isApproved, navigate]);
 
@@ -65,6 +63,12 @@ const Login = () => {
 
     try {
       setIsSubmitting(true);
+      console.log("[DEBUG] Login attempt:", {
+        email: formData.email,
+        password: formData.password,
+        emailLength: formData.email?.length,
+        passwordLength: formData.password?.length,
+      });
       const response = await api.post("/login", {
         email: formData.email,
         password: formData.password,
@@ -85,21 +89,10 @@ const Login = () => {
       }
 
       login(token, user);
-      navigate(getRoleHome(user?.role, user?.is_approved), { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const message = getApiErrorMessage(err, "Login failed.");
       setError(message);
-      
-      // Check if email is not verified
-      if (
-        (err?.response?.status === 401 || err?.response?.status === 403) &&
-        (err?.response?.data?.email_verified === false || err?.response?.data?.error === "EMAIL_NOT_VERIFIED")
-      ) {
-        setEmailNotVerified(true);
-        setUnverifiedEmail(formData.email);
-      } else {
-        setEmailNotVerified(false);
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -160,13 +153,6 @@ const Login = () => {
               {error && (
                 <div className="alert alert-danger">
                   {error}
-                  {emailNotVerified && (
-                    <div className="mt-2">
-                      <Link to="/resend-otp" state={{ email: unverifiedEmail }} className="btn btn-sm btn-outline-primary">
-                        Resend OTP
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
 

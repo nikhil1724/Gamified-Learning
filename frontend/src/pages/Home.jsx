@@ -38,65 +38,80 @@ const Home = () => {
     {
       icon: "💻",
       title: "Coding Challenges",
-      description: "Students can practice real programming problems similar to LeetCode.",
+      description: "Practice real-world programming problems with instant feedback and comprehensive test cases to build professional-grade coding skills.",
     },
     {
       icon: "📚",
-      title: "Structured Learning Courses",
-      description: "Follow organized learning tracks with lessons and exercises.",
+      title: "Structured Learning Paths",
+      description: "Follow expert-designed curriculum from fundamentals to advanced topics with hands-on labs and real-world projects.",
     },
     {
       icon: "🎮",
-      title: "Gamification System",
-      description: "Earn XP, badges, and rewards to stay motivated while learning.",
+      title: "Gamified Engagement",
+      description: "Earn XP points, unlock achievements, and climb leaderboards while maintaining consistent learning habits with streak tracking.",
     },
     {
       icon: "📝",
-      title: "Quizzes & Assessments",
-      description: "Test knowledge with interactive quizzes.",
+      title: "Interactive Assessments",
+      description: "Reinforce learning with dynamic quizzes, auto-graded assignments, and detailed performance analytics.",
     },
     {
       icon: "📊",
-      title: "Progress Tracking",
-      description: "Track course completion, quiz scores, and coding progress.",
+      title: "Advanced Progress Insights",
+      description: "Detailed analytics dashboards showing skill mastery, learning velocity, and personalized recommendations.",
+    },
+    {
+      icon: "🤝",
+      title: "Peer Collaboration",
+      description: "Learn together with community discussions, code reviews, and collaborative problem-solving.",
     },
   ];
 
   const roles = [
     {
       icon: "🎓",
-      title: "Student",
+      title: "For Learners",
+      description: "Accelerate your coding journey",
       features: [
-        "Learn courses",
-        "Solve coding problems",
-        "Take quizzes",
-        "Earn XP and rewards",
+        "Structured learning paths & courses",
+        "Hundreds of coding challenges",
+        "Real-time feedback & analytics",
+        "Earn badges & climb leaderboards",
       ],
       link: "/login/student",
+      primary: true,
     },
     {
       icon: "🧑‍🏫",
-      title: "Instructor",
+      title: "For Instructors",
+      description: "Create engaging learning experiences",
       features: [
-        "Create courses",
-        "Add quizzes and coding challenges",
-        "Track student progress",
+        "Build & publish custom courses",
+        "Design coding challenges & quizzes",
+        "Monitor student progress in real-time",
+        "Access comprehensive analytics",
       ],
       link: "/login/teacher",
     },
     {
       icon: "🛡️",
-      title: "Admin",
+      title: "For Administrators",
+      description: "Manage your learning ecosystem",
       features: [
-        "Manage users",
-        "Approve instructors",
-        "Monitor platform activity",
+        "User & instructor management",
+        "Platform activity monitoring",
+        "System configuration & settings",
+        "Comprehensive reporting tools",
       ],
       link: "/login/admin",
     },
   ];
 
   const gamificationFeatures = [
+    { icon: "⭐", title: "XP Points System", description: "Earn points for every completed task, course, and challenge. Watch your skills grow with every achievement." },
+    { icon: "🏆", title: "Badges & Achievements", description: "Unlock exclusive badges for milestones. Display your accomplishments in your public learner profile." },
+    { icon: "🔥", title: "Daily Streak Tracking", description: "Build consistency and maintain daily learning streaks. Watch your longest streak grow as you commit to learning." },
+    { icon: "📈", title: "Global Leaderboards", description: "Compete with learners worldwide. Track your ranking and celebrate your progress on community leaderboards." },
     { icon: "⭐", title: "XP Points System", description: "Earn points for every completed task" },
     { icon: "🏆", title: "Badges & Achievements", description: "Unlock achievements as you progress" },
     { icon: "🔥", title: "Daily Streak Tracking", description: "Build consistent learning habits" },
@@ -117,10 +132,10 @@ const Home = () => {
                 transition={{ duration: 0.6 }}
               >
                 <h1 className="hero-title">
-                  Gamified Digital Learning Platform for Student Engagement
+                  Master Programming Through <span className="highlight">Gamified Learning</span>
                 </h1>
                 <p className="hero-subtitle">
-                  An interactive platform where students learn programming through courses, coding challenges, quizzes, and gamified rewards to stay motivated.
+                  Transform your coding journey with interactive courses, real-world challenges, and an engaging reward system designed to keep you motivated and consistently progressing.
                 </p>
                 <div className="hero-buttons">
                   <Link to="/register" className="btn btn-primary btn-lg">
@@ -222,6 +237,7 @@ const Home = () => {
                 >
                   <div className="role-icon">{role.icon}</div>
                   <h3 className="role-title">{role.title}</h3>
+                  {role.description && <p className="role-description">{role.description}</p>}
                   <ul className="role-features">
                     {role.features.map((feat, i) => (
                       <li key={i}>✓ {feat}</li>
