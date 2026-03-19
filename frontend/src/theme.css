@@ -18,6 +18,25 @@
   --shadow-lg: 0 16px 34px rgba(15, 23, 42, 0.12);
 }
 
+:root[data-theme="dark"] {
+  --app-bg: #0b1220;
+  --app-text: #e5e7eb;
+  --app-muted: #9ca3af;
+  --card-bg: #111827;
+  --card-border: #243244;
+  --navbar-bg: rgba(17, 24, 39, 0.92);
+  --navbar-text: #e5e7eb;
+  --accent: #60a5fa;
+  --accent-strong: #3b82f6;
+  --accent-light: #1e3a8a;
+  --success: #22c55e;
+  --success-light: #14532d;
+  --border-color: #243244;
+  --shadow-sm: 0 4px 12px rgba(2, 6, 23, 0.5);
+  --shadow: 0 10px 24px rgba(2, 6, 23, 0.55);
+  --shadow-lg: 0 16px 34px rgba(2, 6, 23, 0.65);
+}
+
 body {
   background: var(--app-bg);
   color: var(--app-text);
@@ -25,6 +44,7 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .navbar-theme {

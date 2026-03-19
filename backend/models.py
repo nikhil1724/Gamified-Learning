@@ -145,6 +145,9 @@ class QuizAttempt(db.Model):
     total_questions = db.Column(db.Integer, nullable=False)
     attempted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    user = db.relationship("User", backref="quiz_attempts")
+    quiz = db.relationship("Quiz", backref="quiz_attempts")
+
     def __repr__(self):
         return (
             f"<QuizAttempt id={self.id} user_id={self.user_id} "

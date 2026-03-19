@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const ThemeContext = createContext({
   theme: "light",
@@ -6,21 +6,42 @@ const ThemeContext = createContext({
   toggleTheme: () => {},
 });
 
-// Light theme only - no switching
 export const ThemeProvider = ({ children }) => {
-  const theme = "light";
+  const [theme, setThemeState] = useState(() => {
+    try {
+      const stored = localStorage.getItem("theme");
+      if (stored === "dark" || stored === "light") {
+        return stored;
+      }
+    } catch {
+      // Ignore storage errors.
+    }
+    return "light";
+  });
 
-  const setTheme = useCallback(() => {
-    // No-op - theme is always light
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [theme]);
+
+  const setTheme = useCallback((nextTheme) => {
+    if (nextTheme !== "light" && nextTheme !== "dark") {
+      return;
+    }
+    setThemeState(nextTheme);
   }, []);
 
   const toggleTheme = useCallback(() => {
-    // No-op - theme is always light
+    setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
   }, []);
 
   const value = useMemo(
     () => ({ theme, setTheme, toggleTheme }),
-    []
+    [theme, setTheme, toggleTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

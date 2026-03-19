@@ -88,6 +88,25 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Re-check token expiry periodically while app is open.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentToken = getStoredToken();
+      if (!currentToken) {
+        return;
+      }
+
+      if (!isTokenValid(currentToken)) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setToken(null);
+        setUser(null);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const login = (accessToken, userInfo) => {
     setToken(accessToken);
     setUser(userInfo || null);

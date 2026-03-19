@@ -8,7 +8,8 @@
 
 .quiz-select-card,
 .quiz-session-card,
-.quiz-result-card {
+.quiz-result-card,
+.quiz-history-card {
   border-radius: var(--radius-xl) !important;
   border: 1px solid var(--color-border) !important;
   box-shadow: var(--shadow-sm) !important;
@@ -16,8 +17,48 @@
 
 .quiz-select-card .card-body,
 .quiz-session-card .card-body,
-.quiz-result-card .card-body {
+.quiz-result-card .card-body,
+.quiz-history-card .card-body {
   padding: 1.35rem 1.4rem;
+}
+
+.quiz-review-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.quiz-review-item {
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  padding: 0.75rem 0.9rem;
+}
+
+.quiz-review-item.is-correct {
+  background: #ecfdf3;
+  border-color: #86efac;
+}
+
+.quiz-review-item.is-incorrect {
+  background: #fff1f2;
+  border-color: #fda4af;
+}
+
+.quiz-review-item__title {
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.quiz-review-item__meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.quiz-review-item__explanation {
+  font-size: 0.9rem;
+  color: #334155;
 }
 
 .quiz-select-card .card-title {

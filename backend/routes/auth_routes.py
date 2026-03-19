@@ -1,4 +1,6 @@
 import bcrypt
+import threading
+import time
 
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
@@ -12,6 +14,57 @@ from models import User
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api")
+
+
+LOGIN_WINDOW_SECONDS = 60
+LOGIN_MAX_ATTEMPTS = 8
+_login_attempts_lock = threading.Lock()
+_failed_login_attempts = {}
+
+
+def _client_ip() -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return (request.remote_addr or "unknown").strip()
+
+
+def _prune_attempts(now: float) -> None:
+    cutoff = now - LOGIN_WINDOW_SECONDS
+    stale_ips = []
+    for ip, timestamps in _failed_login_attempts.items():
+        kept = [ts for ts in timestamps if ts >= cutoff]
+        if kept:
+            _failed_login_attempts[ip] = kept
+        else:
+            stale_ips.append(ip)
+
+    for ip in stale_ips:
+        _failed_login_attempts.pop(ip, None)
+
+
+def _rate_limit_status(ip: str) -> tuple[bool, int]:
+    now = time.time()
+    with _login_attempts_lock:
+        _prune_attempts(now)
+        timestamps = _failed_login_attempts.get(ip, [])
+        if len(timestamps) < LOGIN_MAX_ATTEMPTS:
+            return False, 0
+
+        retry_after = int(max(1, LOGIN_WINDOW_SECONDS - (now - timestamps[0])))
+        return True, retry_after
+
+
+def _record_failed_attempt(ip: str) -> None:
+    now = time.time()
+    with _login_attempts_lock:
+        _prune_attempts(now)
+        _failed_login_attempts.setdefault(ip, []).append(now)
+
+
+def _clear_failed_attempts(ip: str) -> None:
+    with _login_attempts_lock:
+        _failed_login_attempts.pop(ip, None)
 
 
 def _missing_fields(payload, required_fields):
@@ -191,6 +244,18 @@ def login():
         return jsonify({"success": True}), 200
 
     try:
+        client_ip = _client_ip()
+        limited, retry_after = _rate_limit_status(client_ip)
+        if limited:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "Too many attempts",
+                    "message": "Too many login attempts. Please try again shortly.",
+                    "retry_after_seconds": retry_after,
+                }
+            ), 429
+
         data = request.get_json(silent=True) or {}
         missing = _missing_fields(data, ["email", "password"])
         if missing:
@@ -209,6 +274,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         password_ok, needs_rehash = _check_password(password, user.password_hash if user else "")
         if not user or not password_ok:
+            _record_failed_attempt(client_ip)
             return jsonify(
                 {
                     "success": False,
@@ -216,6 +282,8 @@ def login():
                     "message": "Invalid email or password",
                 }
             ), 401
+
+        _clear_failed_attempts(client_ip)
 
         if needs_rehash:
             user.password_hash = _hash_password(password)
@@ -319,4 +387,44 @@ def update_profile():
 @auth_bp.post("/auth/logout")
 @jwt_required()
 def logout():
-    return jsonify({"message": "Logged out"})
+    return jsonify({"success": True, "message": "Logged out"})
+
+
+@auth_bp.post("/auth/change-password")
+@jwt_required()
+def change_password():
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    if not user:
+        return jsonify({"success": False, "message": "User not found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    current_password = payload.get("current_password")
+    new_password = payload.get("new_password")
+    confirm_password = payload.get("confirm_password")
+
+    if not current_password or not new_password or not confirm_password:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "current_password, new_password and confirm_password are required.",
+                }
+            ),
+            400,
+        )
+
+    if new_password != confirm_password:
+        return jsonify({"success": False, "message": "New passwords do not match."}), 400
+
+    if len(new_password) < 8:
+        return jsonify({"success": False, "message": "New password must be at least 8 characters."}), 400
+
+    current_ok, _ = _check_password(current_password, user.password_hash)
+    if not current_ok:
+        return jsonify({"success": False, "message": "Current password is incorrect."}), 400
+
+    user.password_hash = _hash_password(new_password)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Password updated successfully."}), 200

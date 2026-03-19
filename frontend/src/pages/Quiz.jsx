@@ -21,6 +21,8 @@ const Quiz = () => {
   const [unlockedBadges, setUnlockedBadges] = useState([]);
   const [showAchievement, setShowAchievement] = useState(false);
   const [achievementBadges, setAchievementBadges] = useState([]);
+  const [quizHistory, setQuizHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [confettiSize, setConfettiSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -43,6 +45,27 @@ const Quiz = () => {
 
     fetchQuizzes();
   }, []);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!isAuthenticated) {
+        setQuizHistory([]);
+        return;
+      }
+
+      try {
+        setHistoryLoading(true);
+        const response = await api.get("/quiz/history");
+        setQuizHistory(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        setQuizHistory([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, [isAuthenticated]);
 
   const currentQuestion = useMemo(
     () => questions[currentIndex],
@@ -171,6 +194,13 @@ const Quiz = () => {
         );
       } catch {
         // Ignore storage errors (e.g., quota).
+      }
+
+      try {
+        const historyResponse = await api.get("/quiz/history");
+        setQuizHistory(Array.isArray(historyResponse.data) ? historyResponse.data : []);
+      } catch {
+        // Ignore history refresh errors.
       }
     } catch (err) {
       const message =
@@ -318,11 +348,75 @@ const Quiz = () => {
               <strong>Score:</strong> {result.score} / {result.total_questions}
             </p>
             <p className="mb-2">
+              <strong>Accuracy:</strong> {result.percentage}%
+            </p>
+            <p className="mb-2">
               <strong>XP Earned:</strong> {result.xp_earned}
             </p>
             <p className="mb-0">
               <strong>Coins Earned:</strong> {result.coins_earned}
             </p>
+
+            {Array.isArray(result.question_results) && result.question_results.length > 0 ? (
+              <div className="quiz-review mt-4">
+                <h5 className="mb-3">Answer Review</h5>
+                <div className="quiz-review-list">
+                  {result.question_results.map((entry, idx) => (
+                    <div
+                      key={entry.question_id}
+                      className={`quiz-review-item ${entry.is_correct ? "is-correct" : "is-incorrect"}`}
+                    >
+                      <div className="quiz-review-item__title">
+                        Q{idx + 1}. {entry.question_text}
+                      </div>
+                      <div className="quiz-review-item__meta">
+                        <span>Your answer: {entry.selected_option || "Not answered"}</span>
+                        <span>Correct: {entry.correct_option}</span>
+                      </div>
+                      {entry.explanation ? (
+                        <p className="quiz-review-item__explanation mb-0">{entry.explanation}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {!selectedQuiz ? (
+        <div className="card shadow-sm quiz-history-card mt-4">
+          <div className="card-body">
+            <h5 className="mb-3">Quiz History</h5>
+            {historyLoading ? (
+              <div className="text-muted">Loading history...</div>
+            ) : quizHistory.length === 0 ? (
+              <div className="text-muted">No attempts yet.</div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Quiz</th>
+                      <th>Score</th>
+                      <th>Accuracy</th>
+                      <th>Attempted</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {quizHistory.slice(0, 10).map((attempt) => (
+                      <tr key={attempt.attempt_id}>
+                        <td>{attempt.quiz_title}</td>
+                        <td>{attempt.score}/{attempt.total_questions}</td>
+                        <td>{attempt.percentage}%</td>
+                        <td>{new Date(attempt.attempted_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       ) : null}

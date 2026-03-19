@@ -5,7 +5,7 @@ from database import db
 from activity_service import record_learning_activity, update_user_streak
 from badge_service import assign_eligible_badges
 from leaderboard_service import broadcast_leaderboard_update
-from models import Course, Enrollment, Progress, Question, Quiz, User
+from models import Course, Enrollment, Progress, Question, Quiz, QuizAttempt, User
 from routes.reward_routes import check_and_unlock_rewards
 from routes.skill_routes import unlock_skills_for_quiz
 from routes.notification_routes import create_notification
@@ -32,6 +32,7 @@ def _serialize_question(question: Question) -> dict:
         "option_b": question.option_b,
         "option_c": question.option_c,
         "option_d": question.option_d,
+        "explanation": getattr(question, "explanation", None),
     }
 
 
@@ -138,14 +139,41 @@ def submit_quiz():
 
     score = 0
     answered_count = 0
+    question_results = []
 
     for question in quiz.questions:
         answer = answers.get(str(question.id)) or answers.get(question.id)
+        normalized_answer = str(answer).strip().upper() if answer is not None else None
+        correct_option = str(question.correct_option).strip().upper()
+        is_correct = normalized_answer == correct_option if normalized_answer is not None else False
+
         if answer is None:
+            question_results.append(
+                {
+                    "question_id": question.id,
+                    "question_text": question.question_text,
+                    "selected_option": None,
+                    "correct_option": correct_option,
+                    "is_correct": False,
+                    "explanation": getattr(question, "explanation", None),
+                }
+            )
             continue
+
         answered_count += 1
-        if str(answer).strip().lower() == question.correct_option.lower():
+        if is_correct:
             score += 1
+
+        question_results.append(
+            {
+                "question_id": question.id,
+                "question_text": question.question_text,
+                "selected_option": normalized_answer,
+                "correct_option": correct_option,
+                "is_correct": is_correct,
+                "explanation": getattr(question, "explanation", None),
+            }
+        )
 
     completion_percentage = (answered_count / total_questions) * 100
     xp_earned = score * 10
@@ -164,6 +192,15 @@ def submit_quiz():
         completion_percentage=completion_percentage,
     )
     db.session.add(progress)
+
+    quiz_attempt = QuizAttempt(
+        user_id=user.id,
+        quiz_id=quiz.id,
+        score=score,
+        total_questions=total_questions,
+    )
+    db.session.add(quiz_attempt)
+
     streak_info = update_user_streak(user=user, user_timezone=client_timezone)
     record_learning_activity(
         user_id=user.id,
@@ -231,8 +268,11 @@ def submit_quiz():
         {
             "score": score,
             "total_questions": total_questions,
+            "percentage": round((score / max(total_questions, 1)) * 100, 1),
             "xp_earned": xp_earned,
             "coins_earned": coins_earned,
+            "attempted_at": quiz_attempt.attempted_at.isoformat() if quiz_attempt.attempted_at else None,
+            "question_results": question_results,
             "streak_count": streak_info["current_streak"],
             "longest_streak": streak_info["longest_streak"],
             "last_active_date": streak_info["last_active_date"],
@@ -265,3 +305,60 @@ def list_course_quizzes(course_id: int):
 
     quizzes = Quiz.query.filter_by(course_id=course.id).all()
     return jsonify([_serialize_quiz(quiz) for quiz in quizzes])
+
+
+@quiz_bp.get("/quiz/history")
+@jwt_required()
+def get_quiz_history():
+    user = _get_user()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    attempts = (
+        QuizAttempt.query.filter_by(user_id=user.id)
+        .order_by(QuizAttempt.attempted_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    if attempts:
+        return jsonify(
+            [
+                {
+                    "attempt_id": attempt.id,
+                    "quiz_id": attempt.quiz_id,
+                    "quiz_title": attempt.quiz.title if attempt.quiz else "Quiz",
+                    "topic": attempt.quiz.topic if attempt.quiz else None,
+                    "difficulty": attempt.quiz.difficulty if attempt.quiz else None,
+                    "score": attempt.score,
+                    "total_questions": attempt.total_questions,
+                    "percentage": round((attempt.score / max(attempt.total_questions, 1)) * 100, 1),
+                    "attempted_at": attempt.attempted_at.isoformat(),
+                }
+                for attempt in attempts
+            ]
+        )
+
+    fallback_progress = (
+        Progress.query.filter_by(user_id=user.id)
+        .order_by(Progress.attempted_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    return jsonify(
+        [
+            {
+                "attempt_id": entry.id,
+                "quiz_id": entry.quiz_id,
+                "quiz_title": entry.quiz.title if entry.quiz else "Quiz",
+                "topic": entry.quiz.topic if entry.quiz else None,
+                "difficulty": entry.quiz.difficulty if entry.quiz else None,
+                "score": entry.score,
+                "total_questions": len(entry.quiz.questions) if entry.quiz and entry.quiz.questions else 1,
+                "percentage": round(entry.completion_percentage or 0, 1),
+                "attempted_at": entry.attempted_at.isoformat(),
+            }
+            for entry in fallback_progress
+        ]
+    )
