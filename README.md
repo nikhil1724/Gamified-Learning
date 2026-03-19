@@ -313,6 +313,12 @@ Optional repository variables for CI target URLs:
 - `PROD_FRONTEND_URL`
 - `PROD_BACKEND_URL`
 
+## 🏗 Production Blueprint
+
+For final-year project delivery artifacts, see:
+- `PROJECT_PRODUCTION_BLUEPRINT.md`
+- `backend/sql/full_platform_schema.sql`
+
 ## 📝 API Documentation
 
 ### Authentication Endpoints
