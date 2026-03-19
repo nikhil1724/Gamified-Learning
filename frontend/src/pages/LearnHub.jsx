@@ -17,6 +17,8 @@ const courses = [
     lessons: 3,
     duration: '60 min',
     level: 'Beginner',
+    category: 'Programming',
+    xpReward: 220,
     topics: ['Variables', 'Control Flow', 'Functions', 'Modules', 'OOP'],
     students: 1245,
     rating: 4.8
@@ -30,6 +32,8 @@ const courses = [
     lessons: 2,
     duration: '40 min',
     level: 'Beginner',
+    category: 'Programming',
+    xpReward: 200,
     topics: ['Syntax', 'Control Flow', 'OOP', 'Collections', 'Spring'],
     students: 987,
     rating: 4.7
@@ -43,6 +47,8 @@ const courses = [
     lessons: 0,
     duration: 'Coming Soon',
     level: 'Beginner',
+    category: 'Web Development',
+    xpReward: 260,
     topics: ['ES6+', 'DOM', 'Async/Await', 'APIs', 'React'],
     students: 0,
     rating: 0,
@@ -57,6 +63,8 @@ const courses = [
     lessons: 0,
     duration: 'Coming Soon',
     level: 'Intermediate',
+    category: 'Data Structures',
+    xpReward: 320,
     topics: ['Pointers', 'STL', 'Templates', 'Memory', 'Performance'],
     students: 0,
     rating: 0,
@@ -66,6 +74,7 @@ const courses = [
 
 const LearnHub = () => {
   const [filter, setFilter] = useState('all');
+  const [category, setCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [courseProgress, setCourseProgress] = useState({});
 
@@ -85,9 +94,10 @@ const LearnHub = () => {
 
   const filteredCourses = courses.filter(course => {
     const matchesFilter = filter === 'all' || course.level.toLowerCase() === filter;
+    const matchesCategory = category === 'all' || course.category === category;
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesCategory && matchesSearch;
   });
 
   return (
@@ -166,6 +176,19 @@ const LearnHub = () => {
                   Advanced
                 </button>
               </div>
+
+              <div className="search-bar" style={{ maxWidth: 240 }}>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="search-input"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="Programming">Programming</option>
+                  <option value="Web Development">Web Development</option>
+                  <option value="Data Structures">Data Structures</option>
+                </select>
+              </div>
             </div>
           </div>
         </section>
@@ -185,6 +208,11 @@ const LearnHub = () => {
             {filteredCourses.length > 0 ? (
               <div className="courses-grid">
                 {filteredCourses.map((course, index) => (
+                  (() => {
+                    const completedCount = courseProgress[course.id]?.length || 0;
+                    const hasProgress = completedCount > 0;
+                    const percent = Math.min(100, Math.round((completedCount / Math.max(1, course.lessons)) * 100));
+                    return (
                   <motion.div
                     key={course.id}
                     className="course-card"
@@ -205,6 +233,17 @@ const LearnHub = () => {
                         <h3>{course.name}</h3>
                         <span className={`level-badge ${course.level.toLowerCase()}`}>
                           {course.level}
+                        </span>
+                      </div>
+
+                      <div className="meta-row" style={{ marginBottom: 10 }}>
+                        <span>
+                          <span className="meta-icon">🏷️</span>
+                          {course.category}
+                        </span>
+                        <span>
+                          <span className="meta-icon">⚡</span>
+                          +{course.xpReward} XP
                         </span>
                       </div>
 
@@ -244,13 +283,16 @@ const LearnHub = () => {
                         )}
                       </div>
 
-                      {!course.comingSoon && courseProgress[course.id] && courseProgress[course.id].length > 0 && (
+                      {!course.comingSoon && hasProgress && (
                         <div className="course-progress-wrapper">
                           <ProgressBar 
-                            current={courseProgress[course.id].length} 
+                            current={completedCount}
                             total={course.lessons}
                             size="small"
                           />
+                          <p className="mt-2 mb-0 text-muted" style={{ fontSize: 12 }}>
+                            {percent}% completed
+                          </p>
                         </div>
                       )}
                     </div>
@@ -265,11 +307,13 @@ const LearnHub = () => {
                           to={`/course/${course.id}/lessons`} 
                           className="btn btn-course"
                         >
-                          View Course
+                          {hasProgress ? 'Continue' : 'Start'}
                         </Link>
                       )}
                     </div>
                   </motion.div>
+                    );
+                  })()
                 ))}
               </div>
             ) : (

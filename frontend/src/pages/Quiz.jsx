@@ -23,6 +23,9 @@ const Quiz = () => {
   const [achievementBadges, setAchievementBadges] = useState([]);
   const [quizHistory, setQuizHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [timeUpSubmitted, setTimeUpSubmitted] = useState(false);
+  const [showXpGain, setShowXpGain] = useState(false);
   const [confettiSize, setConfettiSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -110,26 +113,19 @@ const Quiz = () => {
   }, [quizzes, searchParams, handleSelectQuiz]);
 
   const handleNext = () => {
-    console.log("handleNext: invoked");
     if (!currentQuestion) {
-      console.log("handleNext: no currentQuestion");
       return;
     }
 
     const selected = answers[currentQuestion.id];
     if (!selected) {
-      console.log("handleNext: no answer selected", currentQuestion.id);
       return;
     }
 
     setCurrentIndex((prev) => {
-      console.log("handleNext: currentIndex", prev);
-      console.log("handleNext: questions.length", questions.length);
       if (prev >= questions.length - 1) {
-        console.log("handleNext: at last question");
         return prev;
       }
-      console.log("handleNext: advancing to", prev + 1);
       return prev + 1;
     });
   };
@@ -175,6 +171,8 @@ const Quiz = () => {
           : undefined
       );
       setResult(response.data);
+      setShowXpGain(true);
+      window.setTimeout(() => setShowXpGain(false), 2200);
       const unlocked = response.data?.unlocked_badges || [];
       setUnlockedBadges(unlocked);
       if (Array.isArray(unlocked) && unlocked.length) {
@@ -222,8 +220,50 @@ const Quiz = () => {
     setUnlockedBadges([]);
     setAchievementBadges([]);
     setShowAchievement(false);
+    setTimeLeft(0);
+    setTimeUpSubmitted(false);
     setError("");
   };
+
+  useEffect(() => {
+    if (!selectedQuiz || result || questions.length === 0) {
+      return;
+    }
+
+    setTimeLeft(questions.length * 30);
+    setTimeUpSubmitted(false);
+  }, [selectedQuiz, result, questions.length]);
+
+  useEffect(() => {
+    if (!selectedQuiz || result || questions.length === 0 || timeLeft <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [selectedQuiz, result, questions.length, timeLeft]);
+
+  useEffect(() => {
+    if (
+      selectedQuiz &&
+      !result &&
+      questions.length > 0 &&
+      timeLeft === 0 &&
+      !timeUpSubmitted
+    ) {
+      setTimeUpSubmitted(true);
+      handleSubmit();
+    }
+  }, [selectedQuiz, result, questions.length, timeLeft, timeUpSubmitted]);
+
+  const timerLabel = useMemo(() => {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }, [timeLeft]);
 
   useEffect(() => {
     if (unlockedBadges.length === 0) {
@@ -343,6 +383,9 @@ const Quiz = () => {
       {selectedQuiz && !loading && result ? (
         <div className="card shadow-sm quiz-result-card">
           <div className="card-body">
+            {showXpGain ? (
+              <div className="xp-gain-pop">+{result.xp_earned || 0} XP</div>
+            ) : null}
             <h4 className="mb-3">Quiz Completed</h4>
             <p className="mb-2">
               <strong>Score:</strong> {result.score} / {result.total_questions}
@@ -356,6 +399,21 @@ const Quiz = () => {
             <p className="mb-0">
               <strong>Coins Earned:</strong> {result.coins_earned}
             </p>
+
+            <div className="mt-3 d-flex flex-wrap gap-2">
+              <button type="button" className="btn btn-primary" onClick={() => {
+                setResult(null);
+                setAnswers({});
+                setCurrentIndex(0);
+                setTimeUpSubmitted(false);
+                setTimeLeft(questions.length * 30);
+              }}>
+                Retry Quiz
+              </button>
+              <button type="button" className="btn btn-outline-secondary" onClick={handleReset}>
+                Back to Quiz List
+              </button>
+            </div>
 
             {Array.isArray(result.question_results) && result.question_results.length > 0 ? (
               <div className="quiz-review mt-4">
@@ -474,7 +532,19 @@ const Quiz = () => {
                 <h4 className="mb-1">{selectedQuiz.title}</h4>
                 <p className="text-muted mb-0">{selectedQuiz.topic}</p>
               </div>
-              <span className="badge bg-primary">{selectedQuiz.difficulty}</span>
+              <div className="d-flex gap-2 align-items-center">
+                <span className="badge bg-dark">⏱ {timerLabel}</span>
+                <span className="badge bg-primary">{selectedQuiz.difficulty}</span>
+              </div>
+            </div>
+
+            <div className="progress mb-3" role="progressbar" aria-label="Question progress">
+              <div
+                className="progress-bar"
+                style={{ width: `${Math.round(((currentIndex + 1) / Math.max(questions.length, 1)) * 100)}%` }}
+              >
+                Q{Math.min(currentIndex + 1, questions.length)}/{questions.length || 1}
+              </div>
             </div>
 
             {currentQuestion ? (
@@ -534,10 +604,7 @@ const Quiz = () => {
                     <button
                       type="button"
                       className="btn btn-primary"
-                      onClick={() => {
-                        console.log("Next button: clicked");
-                        handleNext();
-                      }}
+                      onClick={handleNext}
                       disabled={!currentQuestion || !answers[currentQuestion.id]}
                     >
                       Next Question

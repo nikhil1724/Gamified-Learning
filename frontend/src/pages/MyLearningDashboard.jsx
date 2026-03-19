@@ -18,7 +18,37 @@ const MyLearningDashboard = () => {
         const response = await api.get("/learning-dashboard");
         setSummary(response.data || null);
       } catch (err) {
-        setError(err?.response?.data?.error || "Unable to load learning summary.");
+        try {
+          const [dashboardResponse, coursesResponse] = await Promise.all([
+            api.get("/student/dashboard"),
+            api.get("/student/courses"),
+          ]);
+
+          const courseProgress = (coursesResponse.data || []).map((course) => ({
+            course_id: course.course_id,
+            title: course.title,
+            teacher_name: course.teacher_name,
+            total_lessons: course.total_lessons || 0,
+            completed_lessons: course.completed_lessons || 0,
+            percent_complete: course.completion_percentage || 0,
+          }));
+
+          setSummary({
+            total_xp: dashboardResponse.data?.total_xp || 0,
+            total_quizzes_attempted: dashboardResponse.data?.quizzes_attempted || 0,
+            average_quiz_score: dashboardResponse.data?.average_score || 0,
+            average_quiz_completion: dashboardResponse.data?.average_score || 0,
+            course_progress: courseProgress,
+            recent_activity: dashboardResponse.data?.recent_activity || [],
+          });
+          setError("");
+        } catch (fallbackErr) {
+          setError(
+            fallbackErr?.response?.data?.message ||
+              fallbackErr?.response?.data?.error ||
+              "Unable to load learning summary. Please log in again and retry."
+          );
+        }
       } finally {
         setLoading(false);
       }

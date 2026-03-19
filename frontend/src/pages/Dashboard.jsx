@@ -191,6 +191,26 @@ const Dashboard = () => {
     }));
   }, [data]);
 
+  const recommendedCourse = useMemo(() => {
+    const weakTopics = data?.weak_topics || data?.performance_summary?.weak_topics || [];
+    const courseProgress = data?.course_progress || [];
+
+    if (courseProgress.length === 0) {
+      return null;
+    }
+
+    const weakTopic = weakTopics[0]?.toLowerCase?.() || "";
+    const byWeakTopic = courseProgress.find((course) =>
+      (course.title || "").toLowerCase().includes(weakTopic)
+    );
+
+    if (byWeakTopic) {
+      return byWeakTopic;
+    }
+
+    return [...courseProgress].sort((a, b) => a.percent_complete - b.percent_complete)[0];
+  }, [data]);
+
   const RadarTooltip = ({ active, payload }) => {
     if (!active || !payload?.length) {
       return null;
@@ -492,6 +512,32 @@ const Dashboard = () => {
                     </li>
                   ))}
                 </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-4">
+            <div className="rpg-card">
+              <h5 className="mb-3">Recommended Course</h5>
+              {!recommendedCourse ? (
+                <p className="text-muted mb-0">Complete more activities to unlock course recommendations.</p>
+              ) : (
+                <div>
+                  <div className="fw-semibold mb-1">{recommendedCourse.title}</div>
+                  <div className="text-muted small mb-3">
+                    Focus next on this course to improve your overall performance.
+                  </div>
+                  <div className="progress" style={{ height: "10px" }}>
+                    <div
+                      className="progress-bar bg-primary"
+                      role="progressbar"
+                      style={{ width: `${recommendedCourse.percent_complete || 0}%` }}
+                    />
+                  </div>
+                  <small className="text-muted d-block mt-2">
+                    {recommendedCourse.percent_complete || 0}% completed
+                  </small>
+                </div>
               )}
             </div>
           </div>

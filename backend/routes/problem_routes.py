@@ -245,7 +245,21 @@ def _upsert_progress(user_id, problem_id, solved, runtime_ms, submission_id):
 
 
 @problem_bp.get("/problems")
+@jwt_required(optional=True)
 def list_problems():
+    user_id = get_jwt_identity()
+    progress_by_problem = {}
+
+    if user_id:
+        user_progress_entries = ProblemProgress.query.filter_by(user_id=user_id).all()
+        progress_by_problem = {
+            entry.problem_id: {
+                "attempted": bool(entry.last_submission_id),
+                "solved": bool(entry.solved),
+            }
+            for entry in user_progress_entries
+        }
+
     problems = Problem.query.order_by(Problem.created_at.desc()).all()
     data = [
         {
@@ -253,6 +267,8 @@ def list_problems():
             "title": problem.title,
             "difficulty": problem.difficulty,
             "tags": problem.tags or [],
+            "xp": DIFFICULTY_XP.get(problem.difficulty, 10),
+            "status": progress_by_problem.get(problem.id, {"attempted": False, "solved": False}),
         }
         for problem in problems
     ]

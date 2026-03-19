@@ -174,6 +174,30 @@ def seed_quiz_data():
     )
     created_any = created_any or created
 
+    web_course, created = _get_or_create_course(
+        "Web Development",
+        {
+            "description": (
+                "Build responsive web applications using modern frontend and backend tools.\n"
+                "Difficulty: Intermediate | Category: Web"
+            ),
+            "teacher_id": priya.id,
+        },
+    )
+    created_any = created_any or created
+
+    dbms_course, created = _get_or_create_course(
+        "DBMS Fundamentals",
+        {
+            "description": (
+                "Master SQL, normalization, indexing, and transaction concepts.\n"
+                "Difficulty: Intermediate | Category: Database"
+            ),
+            "teacher_id": john.id,
+        },
+    )
+    created_any = created_any or created
+
     db.session.flush()
 
     # Lessons (markdown content)
@@ -215,6 +239,26 @@ def seed_quiz_data():
                     "Collections Framework",
                     """# Collections Framework\n\nCollections store groups of objects.\n\n## Common Collections\n- `ArrayList`\n- `HashMap`\n- `HashSet`\n\n## Example\n```java\nList<String> names = new ArrayList<>();\nnames.add(\"Rahul\");\n```\n""",
                     3,
+                ),
+            ],
+        ),
+        (
+            web_course,
+            [
+                (
+                    "HTML, CSS and JS Essentials",
+                    """# Web Development Basics\n\nUnderstand structure (HTML), style (CSS), and behavior (JavaScript).\n\n## Core Concepts\n- Semantic HTML\n- CSS Flexbox/Grid\n- Event handling\n\n## Mini Example\n```html\n<button id=\"btn\">Click</button>\n<script>document.getElementById('btn').onclick = () => alert('Hello');</script>\n```\n""",
+                    1,
+                ),
+            ],
+        ),
+        (
+            dbms_course,
+            [
+                (
+                    "Relational Database Basics",
+                    """# DBMS Fundamentals\n\nDatabases store structured data efficiently.\n\n## Learn\n- Tables and keys\n- SQL queries\n- Joins and normalization\n\n## SQL Example\n```sql\nSELECT name, score FROM students ORDER BY score DESC;\n```\n""",
+                    1,
                 ),
             ],
         ),
@@ -267,6 +311,7 @@ def seed_quiz_data():
         (dsa_course, "DSA Quiz 1 (XP 75)", "DSA", "Medium"),
         (dsa_course, "DSA Quiz 2 (XP 100)", "DSA", "Medium"),
         (dsa_course, "DSA Quiz 3 (XP 150)", "DSA", "Hard"),
+        (web_course, "Web Development Quiz 1 (XP 80)", "Web", "Medium"),
     ]
 
     quiz_map = {}
@@ -665,6 +710,48 @@ def seed_quiz_data():
                 "B",
             ),
         ],
+        "Web Development Quiz 1 (XP 80)": [
+            (
+                "Which HTML tag is used for hyperlinks?",
+                "<link>",
+                "<a>",
+                "<href>",
+                "<url>",
+                "B",
+            ),
+            (
+                "Which CSS property controls text color?",
+                "font-color",
+                "text-style",
+                "color",
+                "text-color",
+                "C",
+            ),
+            (
+                "Which HTTP method is commonly used to create resources?",
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "B",
+            ),
+            (
+                "In JavaScript, which keyword declares a block-scoped variable?",
+                "var",
+                "const",
+                "both let and const",
+                "define",
+                "C",
+            ),
+            (
+                "Which status code indicates success?",
+                "404",
+                "500",
+                "301",
+                "200",
+                "D",
+            ),
+        ],
     }
 
     for quiz_title, questions in question_bank.items():
@@ -746,7 +833,178 @@ def seed_quiz_data():
                 ("0", "1", True),
             ],
         ),
+        (
+            "Two Sum",
+            "Easy",
+            ["arrays", "hashing"],
+            "Return indices of two numbers that add to target.",
+            "Input: nums list and target integer.",
+            "[2,7,11,15], 9",
+            "[0,1]",
+            priya,
+            [
+                ("[2,7,11,15],9", "[0,1]", False),
+                ("[3,2,4],6", "[1,2]", True),
+            ],
+        ),
+        (
+            "Merge Sorted Arrays",
+            "Easy",
+            ["arrays", "two-pointers"],
+            "Merge two sorted arrays.",
+            "Input: two sorted arrays.",
+            "[1,3,5],[2,4,6]",
+            "[1,2,3,4,5,6]",
+            john,
+            [
+                ("[1,3,5],[2,4,6]", "[1,2,3,4,5,6]", False),
+                ("[1],[2]", "[1,2]", True),
+            ],
+        ),
+        (
+            "Valid Parentheses",
+            "Easy",
+            ["stack", "strings"],
+            "Check if brackets are balanced.",
+            "Input: bracket string.",
+            "()[]{}",
+            "true",
+            priya,
+            [("()[]{}", "true", False), ("(]", "false", True)],
+        ),
+        (
+            "Find Maximum Subarray",
+            "Medium",
+            ["arrays", "dp"],
+            "Find contiguous subarray with largest sum.",
+            "Input: integer array.",
+            "[-2,1,-3,4,-1,2,1,-5,4]",
+            "6",
+            john,
+            [("[-2,1,-3,4,-1,2,1,-5,4]", "6", False), ("[1]", "1", True)],
+        ),
+        (
+            "Longest Substring Without Repeating",
+            "Medium",
+            ["strings", "sliding-window"],
+            "Find longest substring without duplicate characters.",
+            "Input: a string.",
+            "abcabcbb",
+            "3",
+            priya,
+            [("abcabcbb", "3", False), ("bbbbb", "1", True)],
+        ),
+        (
+            "Binary Tree Level Order",
+            "Medium",
+            ["trees", "bfs"],
+            "Return level order traversal of a binary tree.",
+            "Input: tree nodes.",
+            "[3,9,20,null,null,15,7]",
+            "[[3],[9,20],[15,7]]",
+            john,
+            [("[3,9,20,null,null,15,7]", "[[3],[9,20],[15,7]]", False)],
+        ),
+        (
+            "Top K Frequent Elements",
+            "Medium",
+            ["hashing", "heap"],
+            "Find k most frequent elements.",
+            "Input: array and integer k.",
+            "[1,1,1,2,2,3],2",
+            "[1,2]",
+            priya,
+            [("[1,1,1,2,2,3],2", "[1,2]", False)],
+        ),
+        (
+            "Rotate Matrix",
+            "Medium",
+            ["arrays", "matrix"],
+            "Rotate n x n matrix by 90 degrees.",
+            "Input: matrix.",
+            "[[1,2,3],[4,5,6],[7,8,9]]",
+            "[[7,4,1],[8,5,2],[9,6,3]]",
+            john,
+            [("[[1,2,3],[4,5,6],[7,8,9]]", "[[7,4,1],[8,5,2],[9,6,3]]", False)],
+        ),
+        (
+            "Kth Largest Element",
+            "Medium",
+            ["heap", "arrays"],
+            "Find kth largest element in an unsorted array.",
+            "Input: array and k.",
+            "[3,2,1,5,6,4],2",
+            "5",
+            priya,
+            [("[3,2,1,5,6,4],2", "5", False)],
+        ),
+        (
+            "Course Schedule",
+            "Medium",
+            ["graphs", "topological-sort"],
+            "Determine if all courses can be finished.",
+            "Input: numCourses, prerequisites.",
+            "2,[[1,0]]",
+            "true",
+            john,
+            [("2,[[1,0]]", "true", False), ("2,[[1,0],[0,1]]", "false", True)],
+        ),
+        (
+            "LRU Cache",
+            "Hard",
+            ["design", "hashing"],
+            "Implement LRU cache with O(1) operations.",
+            "Input: operations list.",
+            "put(1,1),put(2,2),get(1)",
+            "1",
+            priya,
+            [("put(1,1),put(2,2),get(1)", "1", False)],
+        ),
+        (
+            "Median of Two Sorted Arrays",
+            "Hard",
+            ["arrays", "binary-search"],
+            "Find median of two sorted arrays.",
+            "Input: nums1, nums2.",
+            "[1,3],[2]",
+            "2.0",
+            john,
+            [("[1,3],[2]", "2.0", False)],
+        ),
+        (
+            "N-Queens",
+            "Hard",
+            ["backtracking"],
+            "Return all distinct N-Queens solutions.",
+            "Input: n.",
+            "4",
+            "2",
+            priya,
+            [("4", "2", False)],
+        ),
     ]
+
+    # Add more easy-level problems to complete 20 total problems (Easy:10 Medium:7 Hard:3)
+    easy_showcase_problems = [
+        ("FizzBuzz", ["math", "strings"]),
+        ("Anagram Check", ["strings", "hashing"]),
+        ("Climbing Stairs", ["dp", "math"]),
+    ]
+
+    for title, tags in easy_showcase_problems:
+        problem_specs.append(
+            (
+                title,
+                "Easy",
+                tags,
+                f"Solve the {title} problem with an efficient approach.",
+                "Input format varies by problem.",
+                "sample-input",
+                "sample-output",
+                priya,
+                [("sample-input", "sample-output", False)],
+            )
+        )
 
     for title, difficulty, tags, description, constraints, example_input, example_output, creator, tests in problem_specs:
         problem = Problem.query.filter_by(title=title).first()

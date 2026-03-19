@@ -12,6 +12,16 @@ const ProblemsList = () => {
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState("all");
 
+  const getStatusPill = (problem) => {
+    if (problem?.status?.solved) {
+      return { label: "Solved", className: "status-pill status-pill--solved" };
+    }
+    if (problem?.status?.attempted) {
+      return { label: "Attempted", className: "status-pill status-pill--attempted" };
+    }
+    return { label: "Unsolved", className: "status-pill status-pill--unsolved" };
+  };
+
   useEffect(() => {
     const fetchProblems = async () => {
       try {
@@ -92,9 +102,13 @@ const ProblemsList = () => {
                       {problem.difficulty}
                     </span>
                   </div>
+                  <div className="problem-card__meta">
+                    <span className="xp-pill">⚡ +{problem.xp || 10} XP</span>
+                    <span className={getStatusPill(problem).className}>{getStatusPill(problem).label}</span>
+                  </div>
                   <div className="problem-card__tags">
                     {problem.tags?.length
-                      ? problem.tags.map((tag) => <span key={tag}>{tag}</span>)
+                      ? problem.tags.map((tag) => <span key={tag}>#{tag}</span>)
                       : "No tags"}
                   </div>
                 </Link>

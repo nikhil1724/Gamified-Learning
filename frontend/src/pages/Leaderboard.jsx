@@ -18,6 +18,7 @@ const Leaderboard = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [range, setRange] = useState("all-time");
 
   const applyLeaderboard = (incomingRows) => {
     if (!Array.isArray(incomingRows)) {
@@ -125,14 +126,23 @@ const Leaderboard = () => {
 
   const currentUserId = user?.id;
 
-  const leaderboardRows = useMemo(
-    () =>
-      rows.map((entry) => ({
-        ...entry,
-        isCurrentUser: currentUserId && entry.id === currentUserId,
-      })),
-    [rows, currentUserId]
-  );
+  const leaderboardRows = useMemo(() => {
+    const mapped = rows.map((entry) => ({
+      ...entry,
+      isCurrentUser: currentUserId && entry.id === currentUserId,
+      weekly_score: entry.xp_points + (entry.daily_streak || 0) * 30,
+    }));
+
+    if (range === "weekly") {
+      return [...mapped]
+        .sort((a, b) => b.weekly_score - a.weekly_score)
+        .map((entry, index) => ({ ...entry, rank: index + 1 }));
+    }
+
+    return mapped;
+  }, [rows, currentUserId, range]);
+
+  const podium = leaderboardRows.slice(0, 3);
 
   return (
     <PageTransition>
@@ -143,6 +153,22 @@ const Leaderboard = () => {
           <p className="text-muted mb-0">
             See top learners and challenge your friends.
           </p>
+        </div>
+        <div className="btn-group" role="group" aria-label="Leaderboard range">
+          <button
+            type="button"
+            className={`btn btn-sm ${range === "weekly" ? "btn-primary" : "btn-outline-primary"}`}
+            onClick={() => setRange("weekly")}
+          >
+            Weekly
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${range === "all-time" ? "btn-primary" : "btn-outline-primary"}`}
+            onClick={() => setRange("all-time")}
+          >
+            All-Time
+          </button>
         </div>
       </div>
 
@@ -155,11 +181,31 @@ const Leaderboard = () => {
       ) : null}
 
       {!loading && leaderboardRows.length > 0 ? (
-        <div className="table-responsive shadow-sm rounded">
+        <>
+          <div className="row g-3 mb-4">
+            {podium.map((entry) => (
+              <div className="col-12 col-md-4" key={`podium-${entry.id}`}>
+                <div className={`card shadow-sm border-0 h-100 ${entry.isCurrentUser ? "bg-primary-subtle" : ""}`}>
+                  <div className="card-body text-center">
+                    <div className="display-6 mb-2">{medalByRank[entry.rank] || "🏅"}</div>
+                    <div className="rounded-circle bg-dark text-white d-inline-flex align-items-center justify-content-center mb-2" style={{ width: 54, height: 54 }}>
+                      {(entry.name || "U").charAt(0).toUpperCase()}
+                    </div>
+                    <h5 className="mb-1">{entry.name}</h5>
+                    <p className="text-muted mb-2">Level {entry.level}</p>
+                    <div className="fw-semibold">{range === "weekly" ? entry.weekly_score : entry.xp_points} XP</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="table-responsive shadow-sm rounded">
           <table className="table table-striped table-hover align-middle mb-0">
             <thead className="table-dark">
               <tr>
                 <th scope="col">Rank</th>
+                <th scope="col">Avatar</th>
                 <th scope="col">Student Name</th>
                 <th scope="col">Level</th>
                 <th scope="col">XP Points</th>
@@ -207,19 +253,25 @@ const Leaderboard = () => {
                     </span>
                   </td>
                   <td>
+                    <span className="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style={{ width: 34, height: 34, fontSize: 13 }}>
+                      {(entry.name || "U").charAt(0).toUpperCase()}
+                    </span>
+                  </td>
+                  <td>
                     <span className="fw-semibold">{entry.name}</span>
                     {entry.isCurrentUser ? (
                       <span className="badge text-bg-primary ms-2">You</span>
                     ) : null}
                   </td>
                   <td>{entry.level}</td>
-                  <td>{entry.xp_points}</td>
+                    <td>{range === "weekly" ? entry.weekly_score : entry.xp_points}</td>
                   <td>{entry.coins}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+          </>
       ) : null}
       </div>
     </PageTransition>
