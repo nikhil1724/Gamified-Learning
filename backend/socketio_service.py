@@ -1,16 +1,17 @@
 from flask_socketio import SocketIO, emit
 
 
-socketio = SocketIO(async_mode="gevent", cors_allowed_origins="*")
+socketio = SocketIO(async_mode="threading", cors_allowed_origins="*")
 
 
 def init_socketio(app):
     socketio.init_app(
         app,
-        async_mode="gevent",
+        async_mode="threading",
         cors_allowed_origins=app.config.get("CORS_ORIGINS", "*"),
         ping_interval=25,
         ping_timeout=60,
+        allow_upgrades=False,
     )
 
 

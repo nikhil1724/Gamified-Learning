@@ -20,7 +20,8 @@ export const getLeaderboardSocket = () => {
   }
 
   socketInstance = io(getSocketBaseUrl(), {
-    transports: ["websocket", "polling"],
+    transports: ["polling"],
+    upgrade: false,
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,
