@@ -82,13 +82,13 @@ Once deployments complete, run these checks:
 
 #### 5a. Backend Health Check (Postman or curl)
 ```bash
-curl -X GET https://your-render-backend-domain/api/health
+curl -X GET https://your-render-backend-domain/api/test
 ```
-Expected: `{ "status": "ok" }`
+Expected: `{ "message": "Backend working" }`
 
 #### 5b. Auth Test (Browser Console)
 Navigate to login page, open DevTools → Network tab, attempt login:
-- Should see POST to `/api/auth/login`
+- Should see POST to `/api/login`
 - Should receive 200 (not 401 or CORS errors)
 - Verify `Authorization` header in response
 
@@ -141,7 +141,7 @@ If production breaks:
 | Area | Before | After |
 |------|--------|-------|
 | Mobile Navbar | Could get stuck open after navigation | Auto-closes on link click |
-| API Base URL | Silently fell back to localhost if env missing | Explicitly uses `window.location.origin` in production |
+| API Base URL | Could target the wrong host when env missing | Uses `REACT_APP_API_URL`, with Vercel fallback to Render backend |
 | CORS Origins | Single origin only | Multiple origin support (main + preview) |
 | Learn Page <400px | Layout overlap, unresponsive buttons | Explicit tiny breakpoints, full responsiveness |
 | Bootstrap JS | Depended on external CDN or missing | Explicitly imported in React entry |
