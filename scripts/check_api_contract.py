@@ -2,6 +2,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -188,7 +189,14 @@ def map_frontend_to_backend(
     return missing, matched
 
 
-def _http_request(method: str, url: str, payload=None, token: Optional[str] = None, timeout: int = 20):
+def _http_request(
+    method: str,
+    url: str,
+    payload=None,
+    token: Optional[str] = None,
+    timeout: int = 20,
+    retries: int = 2,
+):
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -198,15 +206,19 @@ def _http_request(method: str, url: str, payload=None, token: Optional[str] = No
         body = json.dumps(payload).encode("utf-8")
 
     request = urllib.request.Request(url=url, method=method, headers=headers, data=body)
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            text = response.read().decode("utf-8", errors="replace")
-            return response.status, text, None
-    except urllib.error.HTTPError as exc:
-        text = exc.read().decode("utf-8", errors="replace")
-        return exc.code, text, None
-    except Exception as exc:
-        return None, "", str(exc)
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                text = response.read().decode("utf-8", errors="replace")
+                return response.status, text, None
+        except urllib.error.HTTPError as exc:
+            text = exc.read().decode("utf-8", errors="replace")
+            return exc.code, text, None
+        except Exception as exc:
+            is_last = attempt >= retries
+            if is_last:
+                return None, "", str(exc)
+            time.sleep(0.5 * (attempt + 1))
 
 
 def _fill_placeholders(path: str) -> str:

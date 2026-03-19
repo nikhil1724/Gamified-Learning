@@ -287,6 +287,32 @@ What it verifies:
 - Auth-required endpoints correctly return auth errors when called without a token.
 - Core auth endpoints (`/api/login`, `/api/register`) return expected status codes.
 
+## ✅ Core Smoke Test
+
+Run this command from the project root for a quick production sanity check of core flows:
+
+```bash
+npm run smoke:check
+```
+
+What it verifies:
+- Frontend `/` and `/login` are reachable.
+- Backend `/api/test` is reachable.
+- `/api/login` invalid-credential behavior is correct.
+- Core read endpoints (`/api/courses`, `/api/leaderboard`) do not return `5xx` or `405`.
+
+## ✅ CI Validation
+
+The repository now includes a GitHub Actions workflow that runs on every push and pull request:
+- Frontend production build.
+- Backend Python compile checks.
+- API contract check.
+- Core smoke check.
+
+Optional repository variables for CI target URLs:
+- `PROD_FRONTEND_URL`
+- `PROD_BACKEND_URL`
+
 ## 📝 API Documentation
 
 ### Authentication Endpoints
