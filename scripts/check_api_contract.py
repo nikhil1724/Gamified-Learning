@@ -257,11 +257,31 @@ def _is_safe_to_probe_without_payload(path: str, method: str) -> bool:
     return not any(fragment in path for fragment in deny_fragments)
 
 
+def _is_public_probe_candidate(path: str) -> bool:
+    canonical = _canonicalize_path(path)
+    public_exact = {
+        "/api/courses",
+        "/api/leaderboard",
+        "/api/problems",
+        "/api/quizzes",
+        "/api/rewards",
+    }
+    public_prefixes = (
+        "/api/problem/",
+        "/api/quiz/",
+    )
+
+    if canonical in public_exact:
+        return True
+    return any(canonical.startswith(prefix) for prefix in public_prefixes)
+
+
 def run_live_contract_checks(
     backend_base: str,
     frontend_endpoints: List[Endpoint],
     timeout: int,
     token: Optional[str],
+    probe_authless_all: bool,
 ) -> List[CheckResult]:
     checks: List[CheckResult] = []
 
@@ -314,6 +334,9 @@ def run_live_contract_checks(
         if not _is_safe_to_probe_without_payload(endpoint.path, endpoint.method):
             continue
 
+        if not token and not probe_authless_all and not _is_public_probe_candidate(endpoint.path):
+            continue
+
         probe_path = _fill_placeholders(endpoint.path)
         url = f"{backend_base}{probe_path}"
         status, body, err = _http_request(endpoint.method, url, timeout=timeout, token=token)
@@ -354,6 +377,11 @@ def main() -> int:
         default="",
         help="Optional JWT token for live checks requiring authentication.",
     )
+    parser.add_argument(
+        "--probe-authless-all",
+        action="store_true",
+        help="Probe all discovered endpoints even without a token (can generate many expected 401 logs).",
+    )
     args = parser.parse_args()
 
     workspace = Path(args.workspace).resolve()
@@ -388,6 +416,7 @@ def main() -> int:
             frontend_endpoints=frontend_eps,
             timeout=args.timeout,
             token=args.token.strip() or None,
+            probe_authless_all=args.probe_authless_all,
         )
 
         print_section("Live Contract Audit")
