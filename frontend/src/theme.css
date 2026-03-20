@@ -60,6 +60,11 @@ body {
     border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Tailwind also defines a .collapse utility; keep Bootstrap navbar collapse visible. */
+.navbar-theme .navbar-collapse.collapse {
+  visibility: visible;
+}
+
 .navbar-theme--scrolled {
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
   border-color: rgba(203, 213, 225, 0.9);
