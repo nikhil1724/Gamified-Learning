@@ -68,11 +68,8 @@ const VerifyOtp = () => {
       subtitle="Enter the 6-digit OTP sent to your email to activate your account"
     >
       <form onSubmit={handleVerify} className="register-form">
-        <div className="form-group">
-          <label htmlFor="verify-email" className="form-label">
-            Email
-          </label>
-          <input id="verify-email" className="form-control" type="email" value={email} readOnly />
+        <div className="alert alert-info" role="alert">
+          OTP sent to <strong>{email || "your email"}</strong>
         </div>
 
         <div className="form-group">
