@@ -51,6 +51,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
+      - name: Socket worker compatibility guard
+        run: |
+          REALTIME_ENABLED="${{ vars.REACT_APP_ENABLE_REALTIME }}"
+          REALTIME_ENABLED="${REALTIME_ENABLED:-false}"
+          python scripts/check_socket_worker_compat.py \
+            --realtime-enabled "$REALTIME_ENABLED" \
+            --procfile Procfile \
+            --procfile backend/Procfile
+
       - name: Compile backend modules
         run: |
           python -m py_compile backend/app.py backend/models.py backend/routes/*.py

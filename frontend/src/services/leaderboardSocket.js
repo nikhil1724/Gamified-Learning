@@ -2,6 +2,15 @@ import { io } from "socket.io-client";
 import { resolveBaseApiUrl } from "./api";
 
 let socketInstance = null;
+const ENABLE_REALTIME = process.env.REACT_APP_ENABLE_REALTIME === "true";
+
+const createNoopSocket = () => ({
+  connected: false,
+  on: () => {},
+  off: () => {},
+  emit: () => {},
+  disconnect: () => {},
+});
 
 const getSocketBaseUrl = () => {
   const rawApiUrl = resolveBaseApiUrl();
@@ -16,6 +25,12 @@ const getSocketBaseUrl = () => {
 
 export const getLeaderboardSocket = () => {
   if (socketInstance) {
+    return socketInstance;
+  }
+
+  // Realtime is optional. Keep HTTP polling as the default for sync-worker deployments.
+  if (!ENABLE_REALTIME) {
+    socketInstance = createNoopSocket();
     return socketInstance;
   }
 
