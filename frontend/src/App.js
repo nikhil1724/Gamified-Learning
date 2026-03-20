@@ -15,6 +15,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
 import Quiz from "./pages/Quiz";
 import Register from "./pages/Register";
+import VerifyOtp from "./pages/VerifyOtp";
 import Rewards from "./pages/Rewards";
 import RoleSelect from "./pages/RoleSelect";
 import SkillTree from "./pages/SkillTree";
@@ -67,6 +68,10 @@ const getPageTitle = (pathname) => {
     return "Dashboard | Gamified Learning";
   }
 
+  if (pathname.startsWith("/verify-otp")) {
+    return "Verify OTP | Gamified Learning";
+  }
+
   return "Gamified Learning Platform";
 };
 
@@ -116,6 +121,7 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
         <Route path="/login/admin" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/register/teacher" element={<Register />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route
           path="/home"
           element={<Navigate to={getRoleHome(role, isApproved)} replace />}

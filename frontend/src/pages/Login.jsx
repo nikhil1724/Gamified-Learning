@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import PageTransition from "../components/PageTransition";
-import api, { getApiErrorMessage } from "../services/api";
+import { getApiErrorMessage } from "../services/api";
+import { loginUser } from "../services/authApi";
 import "./Login.css";
 
 const Login = () => {
@@ -69,7 +70,7 @@ const Login = () => {
         emailLength: formData.email?.length,
         passwordLength: formData.password?.length,
       });
-      const response = await api.post("/login", {
+      const response = await loginUser({
         email: formData.email,
         password: formData.password,
       });
@@ -91,6 +92,10 @@ const Login = () => {
       login(token, user);
       navigate("/dashboard", { replace: true });
     } catch (err) {
+      if (err?.response?.data?.requires_otp && err?.response?.data?.email) {
+        navigate(`/verify-otp?email=${encodeURIComponent(err.response.data.email)}`, { replace: true });
+        return;
+      }
       const message = getApiErrorMessage(err, "Login failed.");
       setError(message);
     } finally {

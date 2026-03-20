@@ -1,9 +1,12 @@
 import bcrypt
 import threading
 import time
+import random
+from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from werkzeug.security import check_password_hash
 
@@ -21,6 +24,117 @@ LOGIN_WINDOW_SECONDS = 60
 LOGIN_MAX_ATTEMPTS = 8
 _login_attempts_lock = threading.Lock()
 _failed_login_attempts = {}
+OTP_EXPIRY_MINUTES = 10
+OTP_RESEND_WINDOW_SECONDS = 600
+OTP_RESEND_MAX_ATTEMPTS = 3
+_otp_resend_lock = threading.Lock()
+_otp_resend_attempts = {}
+
+
+def _generate_otp() -> str:
+    return f"{random.randint(0, 999999):06d}"
+
+
+def _ensure_pending_registration_table() -> None:
+    db.session.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS pending_registrations (
+                id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(120) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                otp_hash VARCHAR(255) NOT NULL,
+                otp_expiry DATETIME NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_pending_registrations_email (email),
+                INDEX idx_pending_registrations_expiry (otp_expiry)
+            ) ENGINE=InnoDB
+            """
+        )
+    )
+
+
+def _store_pending_registration(name: str, email: str, password_hash: str, otp_code: str) -> None:
+    otp_hash = _hash_password(otp_code)
+    otp_expiry = datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    db.session.execute(
+        text(
+            """
+            INSERT INTO pending_registrations (name, email, password_hash, otp_hash, otp_expiry)
+            VALUES (:name, :email, :password_hash, :otp_hash, :otp_expiry)
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                password_hash = VALUES(password_hash),
+                otp_hash = VALUES(otp_hash),
+                otp_expiry = VALUES(otp_expiry)
+            """
+        ),
+        {
+            "name": name,
+            "email": email,
+            "password_hash": password_hash,
+            "otp_hash": otp_hash,
+            "otp_expiry": otp_expiry,
+        },
+    )
+
+
+def _fetch_pending_registration(email: str):
+    return db.session.execute(
+        text(
+            """
+            SELECT id, name, email, password_hash, otp_hash, otp_expiry
+            FROM pending_registrations
+            WHERE email = :email
+            LIMIT 1
+            """
+        ),
+        {"email": email},
+    ).mappings().first()
+
+
+def _pending_otp_expired(pending_row) -> bool:
+    otp_expiry = pending_row.get("otp_expiry") if pending_row else None
+    return not otp_expiry or otp_expiry < datetime.utcnow()
+
+
+def _update_pending_registration_otp(email: str, otp_code: str) -> None:
+    otp_hash = _hash_password(otp_code)
+    otp_expiry = datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    db.session.execute(
+        text(
+            """
+            UPDATE pending_registrations
+            SET otp_hash = :otp_hash,
+                otp_expiry = :otp_expiry
+            WHERE email = :email
+            """
+        ),
+        {
+            "email": email,
+            "otp_hash": otp_hash,
+            "otp_expiry": otp_expiry,
+        },
+    )
+
+
+def _otp_resend_allowed(email: str) -> tuple[bool, int]:
+    now = time.time()
+    with _otp_resend_lock:
+        attempts = [
+            ts
+            for ts in _otp_resend_attempts.get(email, [])
+            if ts >= now - OTP_RESEND_WINDOW_SECONDS
+        ]
+        _otp_resend_attempts[email] = attempts
+        if len(attempts) >= OTP_RESEND_MAX_ATTEMPTS:
+            retry_after = int(max(1, OTP_RESEND_WINDOW_SECONDS - (now - attempts[0])))
+            return False, retry_after
+        attempts.append(now)
+        _otp_resend_attempts[email] = attempts
+        return True, 0
 
 
 def _client_ip() -> str:
@@ -174,6 +288,7 @@ def _serialize_profile(user):
         "name": user.name,
         "email": user.email,
         "role": user.role,
+        "is_verified": user.is_verified,
         "is_approved": user.is_approved,
         "level": user.level,
         "xp_points": user.xp_points,
@@ -188,8 +303,10 @@ def _serialize_profile(user):
 
 
 @auth_bp.post("/register")
+@auth_bp.post("/auth/register")
 def register():
     try:
+        _ensure_pending_registration_table()
         data = request.get_json(silent=True) or {}
         missing = _missing_fields(data, ["name", "email", "password"])
         if missing:
@@ -203,35 +320,41 @@ def register():
             return jsonify({"success": False, "error": "Invalid input"}), 400
 
         existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
+        if existing_user and existing_user.is_verified:
             return jsonify({"success": False, "error": "Email already registered"}), 409
 
-        user = User(
+        # Safety cleanup for legacy unverified rows from previous flow.
+        if existing_user and not existing_user.is_verified:
+            db.session.delete(existing_user)
+            db.session.flush()
+
+        password_hash = _hash_password(password)
+        otp_code = _generate_otp()
+        _store_pending_registration(
             name=name,
             email=email,
-            password_hash=_hash_password(password),
-            role="student",
-            is_approved=True,
+            password_hash=password_hash,
+            otp_code=otp_code,
         )
-        db.session.add(user)
+
         db.session.commit()
 
-        # Best-effort email notification; registration should still succeed on SMTP issues.
+        # Best-effort OTP email; account activation depends on verify step.
         send_email(
             current_app.config,
-            to_email=user.email,
-            subject="Welcome to Gamified Learning",
+            to_email=email,
+            subject="Verify your email",
             text_body=(
-                f"Hi {user.name},\n\n"
-                "Welcome to Gamified Learning Platform. "
-                "Your account is now active.\n\n"
+                f"Hi {name},\n\n"
+                f"Your OTP is: {otp_code}\n"
+                f"This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.\n\n"
                 "Regards,\n"
                 "Gamified Learning Team"
             ),
             html_body=(
-                f"<p>Hi {user.name},</p>"
-                "<p>Welcome to <strong>Gamified Learning Platform</strong>. "
-                "Your account is now active.</p>"
+                f"<p>Hi {name},</p>"
+                f"<p>Your OTP is: <strong>{otp_code}</strong></p>"
+                f"<p>This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.</p>"
                 "<p>Regards,<br/>Gamified Learning Team</p>"
             ),
         )
@@ -247,24 +370,169 @@ def register():
     return jsonify(
         {
             "success": True,
-            "message": "Registration successful.",
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "role": user.role,
-                "is_approved": user.is_approved,
-            },
+            "message": "OTP sent",
+            "requires_otp": True,
+            "email": email,
         }
-    ), 201
+    ), 202
+
+
+@auth_bp.post("/verify-otp")
+@auth_bp.post("/auth/verify-otp")
+@auth_bp.post("/verify-registration-otp")
+def verify_otp():
+    try:
+        _ensure_pending_registration_table()
+        data = request.get_json(silent=True) or {}
+        missing = _missing_fields(data, ["email", "otp"])
+        if missing:
+            return jsonify({"success": False, "error": "Missing fields", "fields": missing}), 400
+
+        email = data["email"].strip().lower()
+        otp = str(data["otp"]).strip()
+        if len(otp) != 6 or not otp.isdigit():
+            return jsonify({"success": False, "error": "Invalid OTP format"}), 400
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user and existing_user.is_verified:
+            return jsonify({"success": True, "message": "Email already verified."}), 200
+
+        pending_row = _fetch_pending_registration(email)
+        if not pending_row:
+            return jsonify({"success": False, "error": "No pending registration found."}), 404
+        if _pending_otp_expired(pending_row):
+            return jsonify({"success": False, "error": "OTP expired. Please request a new OTP."}), 400
+
+        otp_ok, _ = _check_password(otp, pending_row["otp_hash"])
+        if not otp_ok:
+            return jsonify({"success": False, "error": "Invalid OTP"}), 400
+
+        if existing_user and not existing_user.is_verified:
+            user = existing_user
+            user.name = pending_row["name"]
+            user.password_hash = pending_row["password_hash"]
+            user.is_verified = True
+            user.otp_code = None
+            user.otp_expiry = None
+            user.is_approved = True
+        else:
+            user = User(
+                name=pending_row["name"],
+                email=pending_row["email"],
+                password_hash=pending_row["password_hash"],
+                role="student",
+                is_approved=True,
+                is_verified=True,
+                otp_code=None,
+                otp_expiry=None,
+            )
+            db.session.add(user)
+
+        db.session.execute(
+            text("DELETE FROM pending_registrations WHERE id = :id"),
+            {"id": pending_row["id"]},
+        )
+        db.session.commit()
+
+        send_email(
+            current_app.config,
+            to_email=user.email,
+            subject="Welcome to Gamified Learning",
+            text_body=(
+                f"Hi {user.name},\n\n"
+                "Your registration is verified and account is active.\n\n"
+                "Regards,\n"
+                "Gamified Learning Team"
+            ),
+            html_body=(
+                f"<p>Hi {user.name},</p>"
+                "<p>Your registration is verified and account is active.</p>"
+                "<p>Regards,<br/>Gamified Learning Team</p>"
+            ),
+        )
+        return jsonify({"success": True, "message": "Email verified successfully."}), 200
+    except OperationalError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database unavailable during OTP verification: %s", exc)
+        return jsonify({"success": False, "error": "Database unavailable", "message": "Please try again shortly."}), 503
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database error during OTP verification: %s", exc)
+        return jsonify({"success": False, "error": "Database error", "message": "OTP verification failed."}), 500
+
+
+@auth_bp.post("/resend-otp")
+@auth_bp.post("/auth/resend-otp")
+def resend_otp():
+    try:
+        _ensure_pending_registration_table()
+        data = request.get_json(silent=True) or {}
+        missing = _missing_fields(data, ["email"])
+        if missing:
+            return jsonify({"success": False, "error": "Missing fields", "fields": missing}), 400
+
+        email = data["email"].strip().lower()
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user and existing_user.is_verified:
+            return jsonify({"success": False, "error": "Email already verified"}), 400
+
+        pending_row = _fetch_pending_registration(email)
+        if not pending_row:
+            return jsonify({"success": False, "error": "No pending registration found."}), 404
+
+        allowed, retry_after = _otp_resend_allowed(email)
+        if not allowed:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "Too many resend requests",
+                    "retry_after_seconds": retry_after,
+                    "message": "Please wait before requesting another OTP.",
+                }
+            ), 429
+
+        otp_code = _generate_otp()
+        _update_pending_registration_otp(email, otp_code)
+        db.session.commit()
+
+        send_email(
+            current_app.config,
+            to_email=email,
+            subject="Verify your email",
+            text_body=(
+                f"Hi {pending_row['name']},\n\n"
+                f"Your OTP is: {otp_code}\n"
+                f"This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.\n\n"
+                "Regards,\n"
+                "Gamified Learning Team"
+            ),
+            html_body=(
+                f"<p>Hi {pending_row['name']},</p>"
+                f"<p>Your OTP is: <strong>{otp_code}</strong></p>"
+                f"<p>This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.</p>"
+                "<p>Regards,<br/>Gamified Learning Team</p>"
+            ),
+        )
+
+        return jsonify({"success": True, "message": "OTP resent"}), 200
+    except OperationalError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database unavailable during OTP resend: %s", exc)
+        return jsonify({"success": False, "error": "Database unavailable", "message": "Please try again shortly."}), 503
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database error during OTP resend: %s", exc)
+        return jsonify({"success": False, "error": "Database error", "message": "Failed to resend OTP."}), 500
 
 
 @auth_bp.route("/login", methods=["POST", "OPTIONS"])
+@auth_bp.route("/auth/login", methods=["POST", "OPTIONS"])
 def login():
     if request.method == "OPTIONS":
         return jsonify({"success": True}), 200
 
     try:
+        _ensure_pending_registration_table()
         client_ip = _client_ip()
         limited, retry_after = _rate_limit_status(client_ip)
         if limited:
@@ -293,6 +561,30 @@ def login():
         password = data["password"]
 
         user = User.query.filter_by(email=email).first()
+        if user and not user.is_verified:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "Verification required",
+                    "message": "Please verify your email with OTP before logging in.",
+                    "requires_otp": True,
+                    "email": email,
+                }
+            ), 403
+
+        if not user:
+            pending_row = _fetch_pending_registration(email)
+            if pending_row and not _pending_otp_expired(pending_row):
+                return jsonify(
+                    {
+                        "success": False,
+                        "error": "Verification required",
+                        "message": "Please verify your email with OTP before logging in.",
+                        "requires_otp": True,
+                        "email": email,
+                    }
+                ), 403
+
         password_ok, needs_rehash = _check_password(password, user.password_hash if user else "")
         if not user or not password_ok:
             _record_failed_attempt(client_ip)
@@ -328,6 +620,7 @@ def login():
                     "name": user.name,
                     "email": user.email,
                     "role": user.role,
+                    "is_verified": user.is_verified,
                     "is_approved": user.is_approved,
                     "level": user.level,
                     "xp_points": user.xp_points,

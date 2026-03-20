@@ -57,11 +57,17 @@ const Register = () => {
 
     try {
       setIsSubmitting(true);
-      await registerUser({
+      const response = await registerUser({
         name: formData.name,
         email: formData.email,
         password: formData.password,
       });
+      if (response?.data?.requires_otp) {
+        navigate(`/verify-otp?email=${encodeURIComponent(response.data.email || formData.email)}`, {
+          replace: true,
+        });
+        return;
+      }
 
       navigate("/login/student", { replace: true });
     } catch (err) {

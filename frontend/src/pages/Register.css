@@ -84,6 +84,12 @@
   border: 1px solid #fca5a5;
 }
 
+.alert-info {
+  background-color: #e0f2fe;
+  color: #0c4a6e;
+  border: 1px solid #7dd3fc;
+}
+
 .text-danger {
   color: #dc2626;
   font-size: 12px;

@@ -17,6 +17,11 @@ export const resolveBaseApiUrl = () => {
       return "https://gamified-learning.onrender.com";
     }
 
+    // Custom production domain should also target hosted backend API.
+    if (host === "gamifiedlearning.quest" || host === "www.gamifiedlearning.quest") {
+      return "https://gamified-learning.onrender.com";
+    }
+
     return window.location.origin;
   }
 
