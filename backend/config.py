@@ -68,6 +68,8 @@ def _parse_cors_origins(value: str):
         return f"^{escaped}$"
 
     required_origins = {
+        "https://gamifiedlearning.quest",
+        "https://www.gamifiedlearning.quest",
         "https://gamified-learning-flame.vercel.app",
         "https://gamified-learning.vercel.app",
         "http://localhost:3000",
