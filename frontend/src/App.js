@@ -3,10 +3,12 @@ import { AnimatePresence } from "framer-motion";
 import { Suspense, lazy, useEffect, useState } from "react";
 
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import SplashScreen from "./components/SplashScreen";
 import AchievementToastHost from "./components/AchievementToastHost";
+import "./styles/layout.css";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Leaderboard from "./pages/Leaderboard";
@@ -52,6 +54,22 @@ const getRoleHome = (role, isApproved) => {
   return role === "teacher" ? "/teacher/dashboard" : "/learn";
 };
 
+const getPageTitle = (pathname) => {
+  if (pathname === "/" || pathname === "/home") {
+    return "Gamified Learning";
+  }
+
+  if (pathname.startsWith("/courses") || pathname.startsWith("/learn/courses")) {
+    return "Courses | Gamified Learning";
+  }
+
+  if (pathname.includes("/dashboard")) {
+    return "Dashboard | Gamified Learning";
+  }
+
+  return "Gamified Learning Platform";
+};
+
 const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
   const location = useLocation();
   const [showLoader, setShowLoader] = useState(false);
@@ -60,6 +78,10 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
     setShowLoader(true);
     const timer = setTimeout(() => setShowLoader(false), 400);
     return () => clearTimeout(timer);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.title = getPageTitle(location.pathname);
   }, [location.pathname]);
 
   return (
@@ -346,13 +368,18 @@ const App = () => {
         v7_relativeSplatPath: true
       }}
     >
-      <Navbar />
-      <AchievementToastHost />
-      <AppRoutes
-        isAuthenticated={isAuthenticated}
-        role={role}
-        isApproved={isApproved}
-      />
+      <div className="app-shell">
+        <Navbar />
+        <AchievementToastHost />
+        <main className="app-main">
+          <AppRoutes
+            isAuthenticated={isAuthenticated}
+            role={role}
+            isApproved={isApproved}
+          />
+        </main>
+        <Footer />
+      </div>
     </BrowserRouter>
   );
 };

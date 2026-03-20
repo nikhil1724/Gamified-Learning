@@ -75,6 +75,8 @@ const CourseList = () => {
                 <option value="programming">Programming</option>
                 <option value="dsa">DSA</option>
                 <option value="web">Web</option>
+                <option value="database">Database</option>
+                <option value="systems">Systems</option>
               </select>
             </div>
           </div>
@@ -104,6 +106,16 @@ const CourseList = () => {
                         {course.category ? (
                           <span className="course-list-tag">{course.category}</span>
                         ) : null}
+                        {course.xp_reward ? (
+                          <span className="course-list-tag">⚡ {course.xp_reward} XP</span>
+                        ) : null}
+                        {Array.isArray(course.tags)
+                          ? course.tags.slice(0, 3).map((tag) => (
+                              <span className="course-list-tag" key={`${course.id}-${tag}`}>
+                                #{tag}
+                              </span>
+                            ))
+                          : null}
                       </div>
                     ) : null}
                   </div>

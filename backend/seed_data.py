@@ -3,21 +3,116 @@ from werkzeug.security import generate_password_hash
 from database import db
 from models import (
     Badge,
+    CodeSubmission,
     CodingProblem,
     Course,
+    DailyChallenge,
+    Enrollment,
     Lesson,
+    LessonProgress,
+    Note,
     Problem,
+    ProblemProgress,
     ProblemTestCase,
+    Progress,
     Question,
     Quiz,
+    QuizAttempt,
     Reward,
     Skill,
+    Submission,
     User,
+    UserBadge,
+    UserReward,
+    UserSkill,
 )
 
 
 DEMO_PASSWORD = "Demo@123"
 DEMO_PASSWORD_HASH = generate_password_hash(DEMO_PASSWORD)
+
+DEMO_USER_EMAILS = [
+    "admin@lms.com",
+    "john@lms.com",
+    "priya@lms.com",
+    "rahul@student.com",
+    "anita@student.com",
+]
+
+DEMO_COURSE_TITLES = [
+    "Python Programming Basics",
+    "Java Programming Mastery",
+    "Data Structures & Algorithms",
+    "Web Development (HTML, CSS, JS)",
+    "DBMS Fundamentals",
+    "C++ Programming",
+    "Operating Systems Basics",
+]
+
+DEMO_QUIZ_TITLES = [
+    "Python Basics Quiz 1 (XP 50)",
+    "Python Basics Quiz 2 (XP 75)",
+    "Python Basics Quiz 3 (XP 100)",
+    "Java Mastery Quiz 1 (XP 50)",
+    "Java Mastery Quiz 2 (XP 75)",
+    "Java Mastery Quiz 3 (XP 100)",
+    "DSA Quiz 1 (XP 75)",
+    "DSA Quiz 2 (XP 100)",
+    "DSA Quiz 3 (XP 150)",
+    "Web Development Quiz 1 (XP 80)",
+    "DBMS Fundamentals Quiz 1 (XP 80)",
+    "Operating Systems Quiz 1 (XP 90)",
+]
+
+DEMO_PROBLEM_TITLES = [
+    "Reverse a String",
+    "Check Palindrome",
+    "Two Sum",
+    "Fibonacci Series",
+    "Merge Sorted Arrays",
+    "Valid Parentheses",
+    "FizzBuzz",
+    "Anagram Check",
+    "Climbing Stairs",
+    "Binary Search",
+    "Longest Substring Without Repeating Characters",
+    "Maximum Subarray",
+    "Top K Frequent Elements",
+    "Kth Largest Element in Array",
+    "Course Schedule",
+    "Binary Tree Level Order Traversal",
+    "Rotate Matrix",
+    "Longest Increasing Subsequence",
+    "LRU Cache",
+    "Median of Two Sorted Arrays",
+    "N-Queens",
+    "Merge K Sorted Lists",
+    "Trapping Rain Water",
+]
+
+DEMO_CODING_PROBLEM_TITLES = [
+    "Reverse a String",
+    "Check Prime Number",
+    "Palindrome Check",
+    "Factorial",
+]
+
+DEMO_SKILLS = [
+    "Python Basics",
+    "Web Development Fundamentals",
+]
+
+DEMO_BADGES = [
+    "Beginner Solver",
+    "Python Master",
+    "5-Day Streak",
+]
+
+DEMO_REWARDS = [
+    "Quiz Explorer",
+    "Course Finisher",
+    "Streak Keeper",
+]
 
 
 def _get_or_create_user(email, defaults):
@@ -137,13 +232,16 @@ def seed_quiz_data():
 
     db.session.flush()
 
-    # Courses (difficulty/category stored in description since schema lacks fields)
+    # Courses (metadata stored in description since schema lacks dedicated fields)
     python_course, created = _get_or_create_course(
         "Python Programming Basics",
         {
             "description": (
-                "Learn core Python syntax, data types, and control flow.\n"
-                "Difficulty: Beginner | Category: Programming"
+                "Learn core Python syntax, data types, loops, functions, and problem solving.\n"
+                "Difficulty: Beginner\n"
+                "Category: Programming\n"
+                "XP Reward: 260\n"
+                "Tags: variables, loops, functions, strings"
             ),
             "teacher_id": priya.id,
         },
@@ -154,8 +252,11 @@ def seed_quiz_data():
         "Java Programming Mastery",
         {
             "description": (
-                "Build strong Java fundamentals with OOP and collections.\n"
-                "Difficulty: Intermediate | Category: Programming"
+                "Build strong Java fundamentals with OOP, collections, and exception handling.\n"
+                "Difficulty: Intermediate\n"
+                "Category: Programming\n"
+                "XP Reward: 320\n"
+                "Tags: oop, classes, inheritance, collections"
             ),
             "teacher_id": john.id,
         },
@@ -166,8 +267,11 @@ def seed_quiz_data():
         "Data Structures & Algorithms",
         {
             "description": (
-                "Practice core data structures and algorithmic thinking.\n"
-                "Difficulty: Advanced | Category: Computer Science"
+                "Master arrays, linked lists, trees, graphs, and algorithmic optimization.\n"
+                "Difficulty: Advanced\n"
+                "Category: DSA\n"
+                "XP Reward: 460\n"
+                "Tags: arrays, trees, graphs, dynamic programming"
             ),
             "teacher_id": john.id,
         },
@@ -175,11 +279,14 @@ def seed_quiz_data():
     created_any = created_any or created
 
     web_course, created = _get_or_create_course(
-        "Web Development",
+        "Web Development (HTML, CSS, JS)",
         {
             "description": (
-                "Build responsive web applications using modern frontend and backend tools.\n"
-                "Difficulty: Intermediate | Category: Web"
+                "Build responsive interfaces and interactive pages with modern web standards.\n"
+                "Difficulty: Intermediate\n"
+                "Category: Web\n"
+                "XP Reward: 340\n"
+                "Tags: html, css, javascript, dom"
             ),
             "teacher_id": priya.id,
         },
@@ -190,10 +297,43 @@ def seed_quiz_data():
         "DBMS Fundamentals",
         {
             "description": (
-                "Master SQL, normalization, indexing, and transaction concepts.\n"
-                "Difficulty: Intermediate | Category: Database"
+                "Master relational modeling, SQL queries, indexing, and ACID transactions.\n"
+                "Difficulty: Intermediate\n"
+                "Category: Database\n"
+                "XP Reward: 300\n"
+                "Tags: sql, normalization, joins, indexing"
             ),
             "teacher_id": john.id,
+        },
+    )
+    created_any = created_any or created
+
+    cpp_course, created = _get_or_create_course(
+        "C++ Programming",
+        {
+            "description": (
+                "Learn C++ syntax, STL containers, pointers, and object-oriented design.\n"
+                "Difficulty: Intermediate\n"
+                "Category: Programming\n"
+                "XP Reward: 350\n"
+                "Tags: pointers, stl, oop, memory"
+            ),
+            "teacher_id": john.id,
+        },
+    )
+    created_any = created_any or created
+
+    os_course, created = _get_or_create_course(
+        "Operating Systems Basics",
+        {
+            "description": (
+                "Understand processes, threads, memory management, scheduling, and file systems.\n"
+                "Difficulty: Beginner\n"
+                "Category: Systems\n"
+                "XP Reward: 280\n"
+                "Tags: process, threads, scheduling, memory"
+            ),
+            "teacher_id": priya.id,
         },
     )
     created_any = created_any or created
@@ -262,6 +402,26 @@ def seed_quiz_data():
                 ),
             ],
         ),
+        (
+            cpp_course,
+            [
+                (
+                    "C++ Fundamentals and STL",
+                    """# C++ Fundamentals\n\nLearn syntax, data types, references, and the STL.\n\n## Core Topics\n- Variables and control flow\n- Functions and references\n- Vectors and maps\n\n## Example\n```cpp\n#include <vector>\nstd::vector<int> nums = {1,2,3};\n```\n""",
+                    1,
+                ),
+            ],
+        ),
+        (
+            os_course,
+            [
+                (
+                    "Processes, Threads, and Scheduling",
+                    """# Operating Systems Basics\n\nUnderstand how an OS manages CPU, memory, and tasks.\n\n## Key Concepts\n- Process vs thread\n- CPU scheduling\n- Deadlocks and synchronization\n\n## Quick Check\nRound Robin is a preemptive scheduling algorithm.\n""",
+                    1,
+                ),
+            ],
+        ),
     ]
 
     for course, lessons in lesson_specs:
@@ -300,7 +460,7 @@ def seed_quiz_data():
 
     db.session.flush()
 
-    # Quizzes (3 per course, 5 questions each)
+    # Quizzes (8-12 total, 5+ questions each)
     quiz_specs = [
         (python_course, "Python Basics Quiz 1 (XP 50)", "Python", "Easy"),
         (python_course, "Python Basics Quiz 2 (XP 75)", "Python", "Easy"),
@@ -312,6 +472,8 @@ def seed_quiz_data():
         (dsa_course, "DSA Quiz 2 (XP 100)", "DSA", "Medium"),
         (dsa_course, "DSA Quiz 3 (XP 150)", "DSA", "Hard"),
         (web_course, "Web Development Quiz 1 (XP 80)", "Web", "Medium"),
+        (dbms_course, "DBMS Fundamentals Quiz 1 (XP 80)", "DBMS", "Medium"),
+        (os_course, "Operating Systems Quiz 1 (XP 90)", "OS", "Medium"),
     ]
 
     quiz_map = {}
@@ -323,7 +485,7 @@ def seed_quiz_data():
                 topic=topic,
                 difficulty=difficulty,
                 course_id=course.id,
-                skill_id=python_skill.id if topic == "Python" else None,
+                skill_id=python_skill.id if topic == "Python" else (web_skill.id if topic == "Web" else None),
             )
             db.session.add(quiz)
             created_any = True
@@ -752,6 +914,90 @@ def seed_quiz_data():
                 "D",
             ),
         ],
+        "DBMS Fundamentals Quiz 1 (XP 80)": [
+            (
+                "Which normal form removes partial dependency?",
+                "1NF",
+                "2NF",
+                "3NF",
+                "BCNF",
+                "B",
+            ),
+            (
+                "Which SQL clause is used to filter grouped results?",
+                "WHERE",
+                "GROUP BY",
+                "HAVING",
+                "ORDER BY",
+                "C",
+            ),
+            (
+                "Which join returns all records from both tables?",
+                "INNER JOIN",
+                "LEFT JOIN",
+                "RIGHT JOIN",
+                "FULL OUTER JOIN",
+                "D",
+            ),
+            (
+                "ACID property that ensures all-or-nothing is:",
+                "Consistency",
+                "Atomicity",
+                "Isolation",
+                "Durability",
+                "B",
+            ),
+            (
+                "Which index type is commonly used in MySQL for primary keys?",
+                "Hash",
+                "B-Tree",
+                "Bitmap",
+                "R-Tree",
+                "B",
+            ),
+        ],
+        "Operating Systems Quiz 1 (XP 90)": [
+            (
+                "Which scheduling algorithm uses time slices?",
+                "FCFS",
+                "SJF",
+                "Round Robin",
+                "Priority Non-preemptive",
+                "C",
+            ),
+            (
+                "A deadlock requires all of the following except:",
+                "Mutual exclusion",
+                "Hold and wait",
+                "Preemption",
+                "Circular wait",
+                "C",
+            ),
+            (
+                "Virtual memory is primarily managed using:",
+                "Registers",
+                "Paging",
+                "Compiler",
+                "Stack only",
+                "B",
+            ),
+            (
+                "Which state represents a process waiting for I/O?",
+                "Running",
+                "Ready",
+                "Blocked",
+                "Terminated",
+                "C",
+            ),
+            (
+                "Context switch means:",
+                "Switching monitor",
+                "Switching from kernel to user mode only",
+                "Saving and restoring CPU state between processes",
+                "Formatting memory",
+                "C",
+            ),
+        ],
     }
 
     for quiz_title, questions in question_bank.items():
@@ -775,236 +1021,267 @@ def seed_quiz_data():
             )
         created_any = True
 
-    # Problem bank (used by coding engine)
+    # Problem bank (23 total, distributed as Easy 10 / Medium 8 / Hard 5)
     problem_specs = [
+        # Easy (10)
         (
             "Reverse a String",
             "Easy",
             ["strings", "basics"],
-            "Write a program that reverses a given string.",
-            "Input: A single string.",
+            "Given a string, return the reversed string.",
+            "Input contains lowercase alphabetic characters.",
             "hello",
             "olleh",
             priya,
-            [
-                ("hello", "olleh", False),
-                ("python", "nohtyp", True),
-            ],
+            [("hello", "olleh", False), ("platform", "mroftalp", True)],
         ),
         (
-            "Check Prime Number",
+            "Check Palindrome",
             "Easy",
-            ["math", "loops"],
-            "Determine if a number is prime.",
-            "Input: An integer n (n > 1).",
-            "11",
-            "Prime",
-            priya,
-            [
-                ("11", "Prime", False),
-                ("12", "Not Prime", True),
-            ],
-        ),
-        (
-            "Palindrome Check",
-            "Easy",
-            ["strings"],
-            "Check whether a string is a palindrome.",
-            "Input: A single string.",
+            ["strings", "two-pointers"],
+            "Check if the given string reads the same forward and backward.",
+            "String length <= 10^4.",
             "level",
-            "Palindrome",
+            "true",
             john,
-            [
-                ("level", "Palindrome", False),
-                ("world", "Not Palindrome", True),
-            ],
-        ),
-        (
-            "Factorial",
-            "Easy",
-            ["math"],
-            "Compute the factorial of a non-negative integer.",
-            "Input: An integer n (0 <= n <= 12).",
-            "5",
-            "120",
-            john,
-            [
-                ("5", "120", False),
-                ("0", "1", True),
-            ],
+            [("level", "true", False), ("coding", "false", True)],
         ),
         (
             "Two Sum",
             "Easy",
-            ["arrays", "hashing"],
-            "Return indices of two numbers that add to target.",
-            "Input: nums list and target integer.",
-            "[2,7,11,15], 9",
+            ["arrays", "hash-map"],
+            "Find two indices whose values sum to target.",
+            "Exactly one valid answer exists.",
+            "[2,7,11,15],9",
             "[0,1]",
             priya,
-            [
-                ("[2,7,11,15],9", "[0,1]", False),
-                ("[3,2,4],6", "[1,2]", True),
-            ],
+            [("[2,7,11,15],9", "[0,1]", False), ("[3,2,4],6", "[1,2]", True)],
+        ),
+        (
+            "Fibonacci Series",
+            "Easy",
+            ["math", "dp"],
+            "Return the nth Fibonacci number (0-indexed).",
+            "0 <= n <= 30.",
+            "7",
+            "13",
+            john,
+            [("7", "13", False), ("10", "55", True)],
         ),
         (
             "Merge Sorted Arrays",
             "Easy",
             ["arrays", "two-pointers"],
-            "Merge two sorted arrays.",
-            "Input: two sorted arrays.",
+            "Merge two sorted arrays into one sorted array.",
+            "Both input arrays are sorted in non-decreasing order.",
             "[1,3,5],[2,4,6]",
             "[1,2,3,4,5,6]",
-            john,
-            [
-                ("[1,3,5],[2,4,6]", "[1,2,3,4,5,6]", False),
-                ("[1],[2]", "[1,2]", True),
-            ],
+            priya,
+            [("[1,3,5],[2,4,6]", "[1,2,3,4,5,6]", False), ("[1],[2]", "[1,2]", True)],
         ),
         (
             "Valid Parentheses",
             "Easy",
             ["stack", "strings"],
-            "Check if brackets are balanced.",
-            "Input: bracket string.",
+            "Validate whether parentheses in the string are balanced.",
+            "Input contains only ()[]{} characters.",
             "()[]{}",
             "true",
-            priya,
-            [("()[]{}", "true", False), ("(]", "false", True)],
-        ),
-        (
-            "Find Maximum Subarray",
-            "Medium",
-            ["arrays", "dp"],
-            "Find contiguous subarray with largest sum.",
-            "Input: integer array.",
-            "[-2,1,-3,4,-1,2,1,-5,4]",
-            "6",
             john,
-            [("[-2,1,-3,4,-1,2,1,-5,4]", "6", False), ("[1]", "1", True)],
+            [("()[]{}", "true", False), ("([)]", "false", True)],
         ),
         (
-            "Longest Substring Without Repeating",
+            "FizzBuzz",
+            "Easy",
+            ["math", "simulation"],
+            "Print numbers from 1..n using Fizz/Buzz rules.",
+            "n <= 100.",
+            "5",
+            "1,2,Fizz,4,Buzz",
+            priya,
+            [("5", "1,2,Fizz,4,Buzz", False), ("3", "1,2,Fizz", True)],
+        ),
+        (
+            "Anagram Check",
+            "Easy",
+            ["strings", "hash-map"],
+            "Determine whether two strings are anagrams.",
+            "Strings contain lowercase letters.",
+            "listen,silent",
+            "true",
+            john,
+            [("listen,silent", "true", False), ("rat,car", "false", True)],
+        ),
+        (
+            "Climbing Stairs",
+            "Easy",
+            ["dp"],
+            "Count distinct ways to climb n stairs using 1 or 2 steps.",
+            "1 <= n <= 45.",
+            "5",
+            "8",
+            priya,
+            [("5", "8", False), ("3", "3", True)],
+        ),
+        (
+            "Binary Search",
+            "Easy",
+            ["arrays", "binary-search"],
+            "Return index of target in sorted array, else -1.",
+            "Array is sorted ascending.",
+            "[-1,0,3,5,9,12],9",
+            "4",
+            john,
+            [("[-1,0,3,5,9,12],9", "4", False), ("[-1,0,3,5,9,12],2", "-1", True)],
+        ),
+
+        # Medium (8)
+        (
+            "Longest Substring Without Repeating Characters",
             "Medium",
             ["strings", "sliding-window"],
-            "Find longest substring without duplicate characters.",
-            "Input: a string.",
+            "Find length of longest substring without duplicate characters.",
+            "String length <= 5 * 10^4.",
             "abcabcbb",
             "3",
             priya,
             [("abcabcbb", "3", False), ("bbbbb", "1", True)],
         ),
         (
-            "Binary Tree Level Order",
+            "Maximum Subarray",
+            "Medium",
+            ["arrays", "kadane"],
+            "Find contiguous subarray with maximum sum.",
+            "Array length <= 10^5.",
+            "[-2,1,-3,4,-1,2,1,-5,4]",
+            "6",
+            john,
+            [("[-2,1,-3,4,-1,2,1,-5,4]", "6", False), ("[1]", "1", True)],
+        ),
+        (
+            "Top K Frequent Elements",
+            "Medium",
+            ["heap", "hash-map"],
+            "Return k most frequent elements from array.",
+            "k is always valid.",
+            "[1,1,1,2,2,3],2",
+            "[1,2]",
+            priya,
+            [("[1,1,1,2,2,3],2", "[1,2]", False), ("[4,4,4,6,6,7],1", "[4]", True)],
+        ),
+        (
+            "Kth Largest Element in Array",
+            "Medium",
+            ["heap", "quickselect"],
+            "Find kth largest element in an unsorted array.",
+            "1 <= k <= array length.",
+            "[3,2,1,5,6,4],2",
+            "5",
+            john,
+            [("[3,2,1,5,6,4],2", "5", False), ("[3,2,3,1,2,4,5,5,6],4", "4", True)],
+        ),
+        (
+            "Course Schedule",
+            "Medium",
+            ["graphs", "topological-sort"],
+            "Determine if all courses can be finished from prerequisites.",
+            "Use cycle detection in directed graph.",
+            "2,[[1,0]]",
+            "true",
+            priya,
+            [("2,[[1,0]]", "true", False), ("2,[[1,0],[0,1]]", "false", True)],
+        ),
+        (
+            "Binary Tree Level Order Traversal",
             "Medium",
             ["trees", "bfs"],
-            "Return level order traversal of a binary tree.",
-            "Input: tree nodes.",
+            "Return nodes level by level from left to right.",
+            "Use queue-based traversal.",
             "[3,9,20,null,null,15,7]",
             "[[3],[9,20],[15,7]]",
             john,
             [("[3,9,20,null,null,15,7]", "[[3],[9,20],[15,7]]", False)],
         ),
         (
-            "Top K Frequent Elements",
-            "Medium",
-            ["hashing", "heap"],
-            "Find k most frequent elements.",
-            "Input: array and integer k.",
-            "[1,1,1,2,2,3],2",
-            "[1,2]",
-            priya,
-            [("[1,1,1,2,2,3],2", "[1,2]", False)],
-        ),
-        (
             "Rotate Matrix",
             "Medium",
-            ["arrays", "matrix"],
-            "Rotate n x n matrix by 90 degrees.",
-            "Input: matrix.",
+            ["matrix", "arrays"],
+            "Rotate n x n matrix by 90 degrees clockwise.",
+            "In-place or equivalent transformed output.",
             "[[1,2,3],[4,5,6],[7,8,9]]",
             "[[7,4,1],[8,5,2],[9,6,3]]",
-            john,
+            priya,
             [("[[1,2,3],[4,5,6],[7,8,9]]", "[[7,4,1],[8,5,2],[9,6,3]]", False)],
         ),
         (
-            "Kth Largest Element",
+            "Longest Increasing Subsequence",
             "Medium",
-            ["heap", "arrays"],
-            "Find kth largest element in an unsorted array.",
-            "Input: array and k.",
-            "[3,2,1,5,6,4],2",
-            "5",
-            priya,
-            [("[3,2,1,5,6,4],2", "5", False)],
-        ),
-        (
-            "Course Schedule",
-            "Medium",
-            ["graphs", "topological-sort"],
-            "Determine if all courses can be finished.",
-            "Input: numCourses, prerequisites.",
-            "2,[[1,0]]",
-            "true",
+            ["dp", "binary-search"],
+            "Compute length of longest strictly increasing subsequence.",
+            "Array length <= 2500.",
+            "[10,9,2,5,3,7,101,18]",
+            "4",
             john,
-            [("2,[[1,0]]", "true", False), ("2,[[1,0],[0,1]]", "false", True)],
+            [("[10,9,2,5,3,7,101,18]", "4", False), ("[0,1,0,3,2,3]", "4", True)],
         ),
+
+        # Hard (5)
         (
             "LRU Cache",
             "Hard",
-            ["design", "hashing"],
-            "Implement LRU cache with O(1) operations.",
-            "Input: operations list.",
-            "put(1,1),put(2,2),get(1)",
+            ["design", "hash-map", "linked-list"],
+            "Implement LRU cache supporting O(1) get and put.",
+            "Capacity is positive.",
+            "capacity=2,put(1,1),put(2,2),get(1)",
             "1",
             priya,
-            [("put(1,1),put(2,2),get(1)", "1", False)],
+            [("capacity=2,put(1,1),put(2,2),get(1)", "1", False)],
         ),
         (
             "Median of Two Sorted Arrays",
             "Hard",
             ["arrays", "binary-search"],
-            "Find median of two sorted arrays.",
-            "Input: nums1, nums2.",
+            "Find median of two sorted arrays in logarithmic time.",
+            "Combined length >= 1.",
             "[1,3],[2]",
             "2.0",
             john,
-            [("[1,3],[2]", "2.0", False)],
+            [("[1,3],[2]", "2.0", False), ("[1,2],[3,4]", "2.5", True)],
         ),
         (
             "N-Queens",
             "Hard",
             ["backtracking"],
-            "Return all distinct N-Queens solutions.",
-            "Input: n.",
+            "Count valid ways to place n queens on n x n board.",
+            "1 <= n <= 9.",
             "4",
             "2",
             priya,
-            [("4", "2", False)],
+            [("4", "2", False), ("1", "1", True)],
+        ),
+        (
+            "Merge K Sorted Lists",
+            "Hard",
+            ["heap", "linked-list"],
+            "Merge k sorted linked lists into one sorted list.",
+            "Total nodes can be up to 10^4.",
+            "[[1,4,5],[1,3,4],[2,6]]",
+            "[1,1,2,3,4,4,5,6]",
+            john,
+            [("[[1,4,5],[1,3,4],[2,6]]", "[1,1,2,3,4,4,5,6]", False)],
+        ),
+        (
+            "Trapping Rain Water",
+            "Hard",
+            ["arrays", "two-pointers"],
+            "Compute total rainwater trapped between bars.",
+            "Heights are non-negative integers.",
+            "[0,1,0,2,1,0,1,3,2,1,2,1]",
+            "6",
+            priya,
+            [("[0,1,0,2,1,0,1,3,2,1,2,1]", "6", False), ("[4,2,0,3,2,5]", "9", True)],
         ),
     ]
-
-    # Add more easy-level problems to complete 20 total problems (Easy:10 Medium:7 Hard:3)
-    easy_showcase_problems = [
-        ("FizzBuzz", ["math", "strings"]),
-        ("Anagram Check", ["strings", "hashing"]),
-        ("Climbing Stairs", ["dp", "math"]),
-    ]
-
-    for title, tags in easy_showcase_problems:
-        problem_specs.append(
-            (
-                title,
-                "Easy",
-                tags,
-                f"Solve the {title} problem with an efficient approach.",
-                "Input format varies by problem.",
-                "sample-input",
-                "sample-output",
-                priya,
-                [("sample-input", "sample-output", False)],
-            )
-        )
 
     for title, difficulty, tags, description, constraints, example_input, example_output, creator, tests in problem_specs:
         problem = Problem.query.filter_by(title=title).first()
@@ -1127,3 +1404,91 @@ def seed_quiz_data():
 
     if created_any:
         db.session.commit()
+
+
+def _delete_records(records):
+    count = 0
+    for record in records:
+        db.session.delete(record)
+        count += 1
+    return count
+
+
+def reseed_demo_data():
+    """Delete known demo records and seed a fresh demo dataset."""
+    summary = {
+        "quizzes_removed": 0,
+        "courses_removed": 0,
+        "problems_removed": 0,
+        "coding_problems_removed": 0,
+        "skills_removed": 0,
+        "badges_removed": 0,
+        "rewards_removed": 0,
+        "users_removed": 0,
+    }
+
+    try:
+        demo_quiz_ids = [
+            quiz_id for (quiz_id,) in db.session.query(Quiz.id).filter(Quiz.title.in_(DEMO_QUIZ_TITLES)).all()
+        ]
+        if demo_quiz_ids:
+            Progress.query.filter(Progress.quiz_id.in_(demo_quiz_ids)).delete(synchronize_session=False)
+            Submission.query.filter(Submission.quiz_id.in_(demo_quiz_ids)).delete(synchronize_session=False)
+            QuizAttempt.query.filter(QuizAttempt.quiz_id.in_(demo_quiz_ids)).delete(synchronize_session=False)
+            DailyChallenge.query.filter(DailyChallenge.quiz_id.in_(demo_quiz_ids)).delete(synchronize_session=False)
+            Question.query.filter(Question.quiz_id.in_(demo_quiz_ids)).delete(synchronize_session=False)
+            summary["quizzes_removed"] = Quiz.query.filter(Quiz.id.in_(demo_quiz_ids)).delete(synchronize_session=False)
+
+        demo_problem_ids = [
+            problem_id for (problem_id,) in db.session.query(Problem.id).filter(Problem.title.in_(DEMO_PROBLEM_TITLES)).all()
+        ]
+        if demo_problem_ids:
+            ProblemTestCase.query.filter(ProblemTestCase.problem_id.in_(demo_problem_ids)).delete(synchronize_session=False)
+            ProblemProgress.query.filter(ProblemProgress.problem_id.in_(demo_problem_ids)).delete(synchronize_session=False)
+            CodeSubmission.query.filter(CodeSubmission.problem_id.in_(demo_problem_ids)).delete(synchronize_session=False)
+            summary["problems_removed"] = Problem.query.filter(Problem.id.in_(demo_problem_ids)).delete(synchronize_session=False)
+
+        demo_course_ids = [
+            course_id for (course_id,) in db.session.query(Course.id).filter(Course.title.in_(DEMO_COURSE_TITLES)).all()
+        ]
+        if demo_course_ids:
+            LessonProgress.query.filter(LessonProgress.course_id.in_(demo_course_ids)).delete(synchronize_session=False)
+            Enrollment.query.filter(Enrollment.course_id.in_(demo_course_ids)).delete(synchronize_session=False)
+            Note.query.filter(Note.course_id.in_(demo_course_ids)).delete(synchronize_session=False)
+            Lesson.query.filter(Lesson.course_id.in_(demo_course_ids)).delete(synchronize_session=False)
+            summary["coding_problems_removed"] = CodingProblem.query.filter(
+                CodingProblem.course_id.in_(demo_course_ids)
+            ).delete(synchronize_session=False)
+            summary["courses_removed"] = Course.query.filter(Course.id.in_(demo_course_ids)).delete(synchronize_session=False)
+
+        demo_skill_ids = [
+            skill_id for (skill_id,) in db.session.query(Skill.id).filter(Skill.skill_name.in_(DEMO_SKILLS)).all()
+        ]
+        if demo_skill_ids:
+            UserSkill.query.filter(UserSkill.skill_id.in_(demo_skill_ids)).delete(synchronize_session=False)
+            summary["skills_removed"] = Skill.query.filter(Skill.id.in_(demo_skill_ids)).delete(synchronize_session=False)
+
+        demo_badge_ids = [
+            badge_id for (badge_id,) in db.session.query(Badge.id).filter(Badge.name.in_(DEMO_BADGES)).all()
+        ]
+        if demo_badge_ids:
+            UserBadge.query.filter(UserBadge.badge_id.in_(demo_badge_ids)).delete(synchronize_session=False)
+            summary["badges_removed"] = Badge.query.filter(Badge.id.in_(demo_badge_ids)).delete(synchronize_session=False)
+
+        demo_reward_ids = [
+            reward_id for (reward_id,) in db.session.query(Reward.id).filter(Reward.badge_name.in_(DEMO_REWARDS)).all()
+        ]
+        if demo_reward_ids:
+            UserReward.query.filter(UserReward.reward_id.in_(demo_reward_ids)).delete(synchronize_session=False)
+            summary["rewards_removed"] = Reward.query.filter(Reward.id.in_(demo_reward_ids)).delete(synchronize_session=False)
+
+        # Keep demo users to preserve auth/session and avoid deleting unrelated user activity.
+        summary["users_removed"] = 0
+
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    seed_quiz_data()
+    return summary

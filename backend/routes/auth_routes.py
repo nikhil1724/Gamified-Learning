@@ -10,6 +10,7 @@ from werkzeug.security import check_password_hash
 from activity_service import update_user_streak
 from badge_service import assign_eligible_badges
 from database import db
+from email_service import send_email
 from models import User
 
 
@@ -214,6 +215,26 @@ def register():
         )
         db.session.add(user)
         db.session.commit()
+
+        # Best-effort email notification; registration should still succeed on SMTP issues.
+        send_email(
+            current_app.config,
+            to_email=user.email,
+            subject="Welcome to Gamified Learning",
+            text_body=(
+                f"Hi {user.name},\n\n"
+                "Welcome to Gamified Learning Platform. "
+                "Your account is now active.\n\n"
+                "Regards,\n"
+                "Gamified Learning Team"
+            ),
+            html_body=(
+                f"<p>Hi {user.name},</p>"
+                "<p>Welcome to <strong>Gamified Learning Platform</strong>. "
+                "Your account is now active.</p>"
+                "<p>Regards,<br/>Gamified Learning Team</p>"
+            ),
+        )
     except OperationalError as exc:
         db.session.rollback()
         current_app.logger.exception("Database unavailable during register: %s", exc)

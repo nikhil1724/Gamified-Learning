@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+import re
 
 from database import db
 from activity_service import record_learning_activity, update_user_streak
@@ -15,12 +16,17 @@ quiz_bp = Blueprint("quizzes", __name__, url_prefix="/api")
 
 
 def _serialize_quiz(quiz: Quiz) -> dict:
+    title = quiz.title or ""
+    xp_match = re.search(r"xp\s*(\d+)", title, re.IGNORECASE)
+    xp_reward = int(xp_match.group(1)) if xp_match else (10 if quiz.difficulty == "Easy" else 20 if quiz.difficulty == "Medium" else 30)
     return {
         "id": quiz.id,
         "title": quiz.title,
         "topic": quiz.topic,
         "difficulty": quiz.difficulty,
         "course_id": quiz.course_id,
+        "xp_reward": xp_reward,
+        "question_count": len(quiz.questions),
     }
 
 

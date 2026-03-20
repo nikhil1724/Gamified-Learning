@@ -363,9 +363,17 @@ const Quiz = () => {
                   <div className="card-body d-flex flex-column">
                     <h5 className="card-title">{quiz.title}</h5>
                     <p className="card-text text-muted mb-2">{quiz.topic}</p>
-                    <span className="badge bg-primary align-self-start">
-                      {quiz.difficulty}
-                    </span>
+                    <div className="d-flex flex-wrap gap-2 mb-3">
+                      <span className="badge bg-primary align-self-start">
+                        {quiz.difficulty}
+                      </span>
+                      <span className="badge bg-light text-dark border">
+                        ⚡ {quiz.xp_reward || 0} XP
+                      </span>
+                      <span className="badge bg-light text-dark border">
+                        {quiz.question_count || 0} Qs
+                      </span>
+                    </div>
                     <button
                       className="btn btn-outline-primary mt-auto"
                       onClick={() => handleSelectQuiz(quiz)}

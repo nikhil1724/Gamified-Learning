@@ -4,7 +4,10 @@ from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
+
+SENDER_EMAIL = "Gamified Learning <no-reply@gamifiedlearning.quest>"
 
 
 def _normalize_database_url(url: str) -> str:
@@ -133,3 +136,8 @@ class Config:
     
     # Disable startup DB mutations in production by default.
     RUN_STARTUP_TASKS = os.getenv("RUN_STARTUP_TASKS", "false").lower() == "true"
+
+    # Email configuration (Resend)
+    EMAIL_FROM = os.getenv("EMAIL_FROM", SENDER_EMAIL)
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+    RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails")

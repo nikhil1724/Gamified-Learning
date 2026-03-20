@@ -15,6 +15,8 @@ def _extract_course_meta(description: str | None) -> dict:
     text = description or ""
     difficulty_match = re.search(r"difficulty\s*:\s*([A-Za-z]+)", text, re.IGNORECASE)
     category_match = re.search(r"category\s*:\s*([A-Za-z\s]+)", text, re.IGNORECASE)
+    xp_match = re.search(r"xp\s*reward\s*:\s*(\d+)", text, re.IGNORECASE)
+    tags_match = re.search(r"tags\s*:\s*([^\n]+)", text, re.IGNORECASE)
 
     difficulty = (difficulty_match.group(1).strip() if difficulty_match else "")
     category = (category_match.group(1).strip() if category_match else "")
@@ -32,10 +34,20 @@ def _extract_course_meta(description: str | None) -> dict:
         normalized_category = "DSA"
     elif "web" in category_lower:
         normalized_category = "Web"
+    elif category:
+        normalized_category = category.strip().title()
+
+    xp_reward = int(xp_match.group(1)) if xp_match else None
+
+    tags = []
+    if tags_match:
+        tags = [token.strip() for token in tags_match.group(1).split(",") if token.strip()]
 
     return {
         "difficulty": normalized_difficulty,
         "category": normalized_category,
+        "xp_reward": xp_reward,
+        "tags": tags,
     }
 
 
@@ -49,6 +61,8 @@ def _serialize_course(course: Course) -> dict:
         "created_at": course.created_at.isoformat(),
         "difficulty": meta["difficulty"],
         "category": meta["category"],
+        "xp_reward": meta["xp_reward"],
+        "tags": meta["tags"],
     }
 
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { GraduationCap } from "lucide-react";
 
 import ProfileDropdown from "./ProfileDropdown";
 import NotificationBell from "./NotificationBell";
@@ -81,7 +82,10 @@ const Navbar = () => {
     >
       <div className="container navbar-container">
         <Link className="navbar-brand fw-bold" to="/">
-          Gamified Learning
+          <span className="brand-logo" aria-hidden="true">
+            <GraduationCap size={16} strokeWidth={2.4} />
+          </span>
+          <span className="brand-text">Gamified Learning</span>
         </Link>
         <button
           className={`navbar-toggler ${isMenuOpen ? "" : "collapsed"}`}
@@ -165,7 +169,7 @@ const Navbar = () => {
               </ul>
               <div className="navbar-actions">
                 {role === "teacher" ? (
-                  <Link to="/teacher/courses" className="btn btn-outline-primary btn-sm d-none d-lg-inline-flex" onClick={closeMenu}>
+                  <Link to="/teacher/courses" className="btn btn-outline-primary btn-sm d-none d-lg-inline-flex navbar-analytics-btn" onClick={closeMenu}>
                     Analytics Hub
                   </Link>
                 ) : null}
@@ -208,10 +212,10 @@ const Navbar = () => {
                 </li>
               </ul>
               <div className="navbar-actions">
-                <Link to="/role-select" className="btn btn-outline-primary btn-sm me-2" onClick={closeMenu}>
+                <Link to="/role-select" className="btn btn-outline-primary btn-sm me-2 navbar-login-btn" onClick={closeMenu}>
                   Login
                 </Link>
-                <Link to="/register" className="btn btn-primary btn-sm" onClick={closeMenu}>
+                <Link to="/register" className="btn btn-primary btn-sm navbar-register-btn" onClick={closeMenu}>
                   Register
                 </Link>
               </div>

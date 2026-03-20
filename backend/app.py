@@ -32,7 +32,7 @@ from routes.teacher_analytics_routes import teacher_analytics_bp
 from routes.activity_routes import activity_bp
 from routes.badge_routes import badge_bp
 from socketio_service import init_socketio, socketio
-from seed_data import seed_quiz_data
+from seed_data import reseed_demo_data, seed_quiz_data
 from models import User
 
 
@@ -236,6 +236,24 @@ def create_app() -> Flask:
         db.session.add(user)
         db.session.commit()
         click.echo(f"Admin user created: {user.email}")
+
+    @app.cli.command("reseed-demo")
+    @click.option("--yes", is_flag=True, help="Skip confirmation prompt")
+    def reseed_demo(yes):
+        """Reset known demo records and re-seed fresh demo data."""
+        if not yes:
+            confirmed = click.confirm(
+                "This will remove existing demo records and regenerate demo data. Continue?",
+                default=False,
+            )
+            if not confirmed:
+                click.echo("Cancelled.")
+                return
+
+        summary = reseed_demo_data()
+        click.echo("Demo reseed completed.")
+        for key, value in summary.items():
+            click.echo(f"- {key}: {value}")
 
     return app
 
