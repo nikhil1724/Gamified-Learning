@@ -1,8 +1,9 @@
 import os
 import logging
 import time
+import traceback
 
-import resend
+import requests
 
 from config import SENDER_EMAIL
 
@@ -29,7 +30,44 @@ def _normalize_resend_api_url(config):
 
 
 def _resend_enabled(config):
-    return bool(config.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY"))
+    api_key = (config.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY") or "").strip()
+    if not api_key:
+        logger.warning("Resend disabled: RESEND_API_KEY is missing or empty.")
+    return bool(api_key)
+
+
+def _resolve_sender(config):
+    return (
+        (config.get("RESEND_FROM_EMAIL") or "").strip()
+        or (config.get("EMAIL_FROM") or "").strip()
+        or (os.environ.get("RESEND_FROM_EMAIL") or "").strip()
+        or (os.environ.get("EMAIL_FROM") or "").strip()
+        or SENDER_EMAIL
+    )
+
+
+def _ssl_verify_enabled(config):
+    raw = (
+        config.get("RESEND_SSL_VERIFY")
+        or os.environ.get("RESEND_SSL_VERIFY")
+        or "true"
+    )
+    return str(raw).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _validate_email_env(config):
+    api_key = (config.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY") or "").strip()
+    sender = _resolve_sender(config)
+
+    if not api_key:
+        logger.error("Email send blocked: RESEND_API_KEY is missing.")
+        return False, "missing_api_key"
+
+    if not sender:
+        logger.error("Email send blocked: RESEND_FROM_EMAIL/EMAIL_FROM is missing.")
+        return False, "missing_sender"
+
+    return True, "ok"
 
 
 def _extract_message_id(response):
@@ -52,13 +90,18 @@ def send_email(config, to_email, subject, text_body, html_body=None):
     if not to_email:
         return False
 
+    env_ok, _ = _validate_email_env(config)
+    if not env_ok:
+        return False
+
     if not _resend_enabled(config):
         return False
 
-    sender = SENDER_EMAIL
-    api_key = config.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY")
-    resend.api_key = api_key
-    resend.api_url = _normalize_resend_api_url(config)
+    sender = _resolve_sender(config)
+    api_key = (config.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY") or "").strip()
+    api_base = _normalize_resend_api_url(config)
+    endpoint = f"{api_base}/emails"
+    ssl_verify = _ssl_verify_enabled(config)
 
     payload = {
         "from": sender,
@@ -69,19 +112,60 @@ def send_email(config, to_email, subject, text_body, html_body=None):
     if html_body:
         payload["html"] = html_body
 
+    print("SENDING OTP TO:", to_email)
+    print("RESEND PAYLOAD:", payload)
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
     for attempt in range(2):
         try:
-            response = resend.Emails.send(payload)
-            message_id = _extract_message_id(response)
+            response = requests.post(
+                endpoint,
+                json=payload,
+                headers=headers,
+                timeout=30,
+                verify=ssl_verify,
+            )
+            response_text = response.text
+            print("RESEND RESPONSE:", response_text)
             logger.info(
-                "Resend email sent successfully to=%s subject=%s message_id=%s attempt=%s",
+                "Resend HTTP response status=%s body=%s to=%s subject=%s attempt=%s",
+                response.status_code,
+                response_text,
                 to_email,
                 subject,
-                message_id or "unknown",
                 attempt + 1,
             )
-            return True
+
+            if 200 <= response.status_code < 300:
+                try:
+                    body = response.json()
+                except Exception:
+                    body = {}
+                message_id = _extract_message_id(body)
+                logger.info(
+                    "Resend email sent successfully to=%s subject=%s message_id=%s attempt=%s",
+                    to_email,
+                    subject,
+                    message_id or "unknown",
+                    attempt + 1,
+                )
+                return True
+
+            logger.error(
+                "Resend non-success status=%s to=%s subject=%s attempt=%s body=%s",
+                response.status_code,
+                to_email,
+                subject,
+                attempt + 1,
+                response_text,
+            )
         except Exception as exc:
+            print("RESEND RESPONSE:", f"exception: {exc}")
+            print(traceback.format_exc())
             logger.exception(
                 "Resend email send failed to=%s subject=%s attempt=%s error=%s",
                 to_email,
@@ -91,34 +175,27 @@ def send_email(config, to_email, subject, text_body, html_body=None):
             )
             if attempt == 0:
                 time.sleep(1)
+                continue
+
+        if attempt == 0:
+            time.sleep(1)
 
     return False
 
 
 def test_email(config, to_email="your_email@gmail.com"):
     """Quick send test for Resend integration using the configured sender identity."""
+    env_ok, _ = _validate_email_env(config)
+    if not env_ok:
+        return False
+
     if not _resend_enabled(config):
         return False
 
-    api_key = config.get("RESEND_API_KEY") or os.environ.get("RESEND_API_KEY")
-    resend.api_key = api_key
-    resend.api_url = _normalize_resend_api_url(config)
-
-    try:
-        response = resend.Emails.send(
-            {
-                "from": SENDER_EMAIL,
-                "to": [to_email],
-                "subject": "Test Email",
-                "html": "<p>Working 🚀</p>",
-            }
-        )
-        logger.info(
-            "Resend test email sent to=%s message_id=%s",
-            to_email,
-            _extract_message_id(response) or "unknown",
-        )
-        return True
-    except Exception as exc:
-        logger.exception("Resend test email failed: %s", exc)
-        return False
+    return send_email(
+        config,
+        to_email,
+        "Test Email",
+        "Working",
+        "<p>Working</p>",
+    )

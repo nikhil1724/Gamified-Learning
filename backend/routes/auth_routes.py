@@ -10,13 +10,6 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from werkzeug.security import check_password_hash
 
-try:
-    from google.auth.transport import requests as google_requests
-    from google.oauth2 import id_token as google_id_token
-except Exception:  # pragma: no cover - import guard for optional dependency at startup
-    google_requests = None
-    google_id_token = None
-
 from activity_service import update_user_streak
 from badge_service import assign_eligible_badges
 from database import db
@@ -86,7 +79,10 @@ def _get_google_client_id() -> str:
 
 
 def _verify_google_id_token(credential: str):
-    if google_id_token is None or google_requests is None:
+    try:
+        from google.auth.transport import requests as google_requests
+        from google.oauth2 import id_token as google_id_token
+    except Exception:
         return None, "Google auth dependency is missing on server."
 
     client_id = _get_google_client_id()
