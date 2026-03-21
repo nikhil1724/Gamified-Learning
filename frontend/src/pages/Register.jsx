@@ -21,6 +21,20 @@ const Register = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [showWakeMessage, setShowWakeMessage] = useState(false);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setShowWakeMessage(false);
+      return undefined;
+    }
+
+    const wakeTimer = window.setTimeout(() => {
+      setShowWakeMessage(true);
+    }, 1800);
+
+    return () => window.clearTimeout(wakeTimer);
+  }, [isSubmitting]);
 
   useEffect(() => {
     if (isTeacherRegister && isAuthenticated) {
@@ -64,6 +78,10 @@ const Register = () => {
       });
       if (response?.data?.requires_otp) {
         navigate(`/verify-otp?email=${encodeURIComponent(response.data.email || formData.email)}`, {
+          state: {
+            cooldownSeconds: Number(response?.data?.resend_cooldown_seconds || 45),
+            sentAt: response?.data?.sent_at || null,
+          },
           replace: true,
         });
         return;
@@ -227,6 +245,12 @@ const Register = () => {
         {error ? (
           <div className="alert alert-danger mb-3" role="alert">
             {error}
+          </div>
+        ) : null}
+
+        {showWakeMessage ? (
+          <div className="alert alert-warning mb-3" role="alert">
+            Server waking up, please wait...
           </div>
         ) : null}
 

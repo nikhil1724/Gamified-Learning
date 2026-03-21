@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import PageTransition from "../components/PageTransition";
 import { getApiErrorMessage } from "../services/api";
-import { loginUser } from "../services/authApi";
+import { googleLoginUser, loginUser } from "../services/authApi";
 import "./Login.css";
+
+const GOOGLE_CLIENT_ID = (process.env.REACT_APP_GOOGLE_CLIENT_ID || "").trim();
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,6 +17,21 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showWakeMessage, setShowWakeMessage] = useState(false);
+  const googleButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setShowWakeMessage(false);
+      return undefined;
+    }
+
+    const wakeTimer = window.setTimeout(() => {
+      setShowWakeMessage(true);
+    }, 1800);
+
+    return () => window.clearTimeout(wakeTimer);
+  }, [isSubmitting]);
 
   const getRoleHome = (userRole, approvalState) => {
     if (!userRole) {
@@ -47,6 +64,50 @@ const Login = () => {
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, role, isApproved, navigate]);
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || !googleButtonRef.current) {
+      return;
+    }
+
+    const googleApi = window.google?.accounts?.id;
+    if (!googleApi) {
+      return;
+    }
+
+    googleApi.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async (response) => {
+        try {
+          setError("");
+          setIsSubmitting(true);
+          const apiResponse = await googleLoginUser({ credential: response.credential });
+          const { token, user } = apiResponse.data;
+
+          if (expectedRole && user?.role && user.role !== expectedRole) {
+            setError(`This account is registered as a ${user.role}. Use the correct login.`);
+            return;
+          }
+
+          login(token, user);
+          navigate("/dashboard", { replace: true });
+        } catch (err) {
+          setError(getApiErrorMessage(err, "Google login failed."));
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+    });
+
+    googleButtonRef.current.innerHTML = "";
+    googleApi.renderButton(googleButtonRef.current, {
+      theme: "outline",
+      size: "large",
+      text: "signin_with",
+      shape: "pill",
+      width: 280,
+    });
+  }, [expectedRole, login, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -161,6 +222,12 @@ const Login = () => {
                 </div>
               )}
 
+              {showWakeMessage ? (
+                <div className="alert alert-warning" role="alert">
+                  Server waking up, please wait...
+                </div>
+              ) : null}
+
               <button type="submit" className="btn btn-primary btn-login" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
@@ -171,6 +238,12 @@ const Login = () => {
                   "Sign In"
                 )}
               </button>
+
+              {GOOGLE_CLIENT_ID ? (
+                <div className="d-flex justify-content-center mt-3">
+                  <div ref={googleButtonRef} />
+                </div>
+              ) : null}
 
               <div className="auth-footer">
                 <p>

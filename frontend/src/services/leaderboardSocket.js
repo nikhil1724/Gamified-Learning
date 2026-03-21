@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-import { resolveBaseApiUrl } from "./api";
+import { BASE_URL } from "./api";
 
 let socketInstance = null;
 const ENABLE_REALTIME = process.env.REACT_APP_ENABLE_REALTIME === "true";
@@ -13,8 +13,7 @@ const createNoopSocket = () => ({
 });
 
 const getSocketBaseUrl = () => {
-  const rawApiUrl = resolveBaseApiUrl();
-  const normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
+  const normalizedApiUrl = BASE_URL.replace(/\/+$/, "");
 
   if (normalizedApiUrl.endsWith("/api")) {
     return normalizedApiUrl.replace(/\/api$/, "");

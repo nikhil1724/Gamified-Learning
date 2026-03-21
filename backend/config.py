@@ -142,4 +142,7 @@ class Config:
     # Email configuration (Resend)
     EMAIL_FROM = os.getenv("EMAIL_FROM", SENDER_EMAIL)
     RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-    RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails")
+    RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com")
+
+    # Google Sign-In configuration
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")

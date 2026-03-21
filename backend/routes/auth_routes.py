@@ -10,6 +10,13 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from werkzeug.security import check_password_hash
 
+try:
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token
+except Exception:  # pragma: no cover - import guard for optional dependency at startup
+    google_requests = None
+    google_id_token = None
+
 from activity_service import update_user_streak
 from badge_service import assign_eligible_badges
 from database import db
@@ -24,15 +31,87 @@ LOGIN_WINDOW_SECONDS = 60
 LOGIN_MAX_ATTEMPTS = 8
 _login_attempts_lock = threading.Lock()
 _failed_login_attempts = {}
-OTP_EXPIRY_MINUTES = 10
+OTP_EXPIRY_MINUTES = 5
 OTP_RESEND_WINDOW_SECONDS = 600
 OTP_RESEND_MAX_ATTEMPTS = 3
+OTP_RESEND_COOLDOWN_SECONDS = 45
+OTP_EMAIL_SUBJECT = "Your OTP Code - Gamified Learning"
 _otp_resend_lock = threading.Lock()
 _otp_resend_attempts = {}
 
 
 def _generate_otp() -> str:
     return f"{random.randint(0, 999999):06d}"
+
+
+def _otp_preview_enabled() -> bool:
+    """Enable OTP preview only for localhost requests."""
+    host = (request.host or "").split(":")[0].lower()
+    return host in {"localhost", "127.0.0.1"}
+
+
+def _log_local_otp(email: str, otp_code: str, context: str) -> None:
+    """Log OTP generation for troubleshooting."""
+    log_line = f"OTP for {email}: {otp_code} ({context})"
+    current_app.logger.info(log_line)
+    # Explicit print requested for quick terminal debugging.
+    print(log_line)
+
+
+def _build_otp_email_content(otp_code: str) -> tuple[str, str]:
+    text_body = (
+        "Gamified Learning\n\n"
+        f"Your one-time OTP code is: {otp_code}\n"
+        f"This code expires in {OTP_EXPIRY_MINUTES} minutes.\n\n"
+        "If you did not request this code, you can ignore this email.\n"
+        "Support: support@gamifiedlearning.quest"
+    )
+
+    html_body = (
+        "<div style=\"font-family:Arial,Helvetica,sans-serif;color:#111827;line-height:1.5;\">"
+        "<h2 style=\"margin:0 0 8px;\">Gamified Learning</h2>"
+        "<p style=\"margin:0 0 12px;\">Verify your email with this OTP code:</p>"
+        f"<div style=\"font-size:38px;font-weight:700;letter-spacing:6px;margin:8px 0 12px;\">{otp_code}</div>"
+        f"<p style=\"margin:0 0 10px;\">This code expires in {OTP_EXPIRY_MINUTES} minutes.</p>"
+        "<p style=\"margin:0 0 10px;\">If this wasn't you, you can ignore this message.</p>"
+        "<p style=\"margin:0;color:#4b5563;\">Need help? Contact support@gamifiedlearning.quest</p>"
+        "</div>"
+    )
+
+    return text_body, html_body
+
+
+def _get_google_client_id() -> str:
+    return (current_app.config.get("GOOGLE_CLIENT_ID") or "").strip()
+
+
+def _verify_google_id_token(credential: str):
+    if google_id_token is None or google_requests is None:
+        return None, "Google auth dependency is missing on server."
+
+    client_id = _get_google_client_id()
+    if not client_id:
+        return None, "Google login is not configured on server."
+
+    try:
+        token_info = google_id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            client_id,
+        )
+    except Exception:
+        return None, "Invalid Google token."
+
+    if token_info.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        return None, "Invalid Google issuer."
+
+    if not token_info.get("email"):
+        return None, "Google account email is missing."
+
+    if not token_info.get("email_verified", False):
+        return None, "Google account email is not verified."
+
+    return token_info, None
 
 
 def _ensure_pending_registration_table() -> None:
@@ -128,6 +207,15 @@ def _otp_resend_allowed(email: str) -> tuple[bool, int]:
             for ts in _otp_resend_attempts.get(email, [])
             if ts >= now - OTP_RESEND_WINDOW_SECONDS
         ]
+
+        # Enforce a short cooldown to prevent rapid-fire resend bursts.
+        if attempts:
+            elapsed = now - attempts[-1]
+            if elapsed < OTP_RESEND_COOLDOWN_SECONDS:
+                retry_after = int(max(1, OTP_RESEND_COOLDOWN_SECONDS - elapsed))
+                _otp_resend_attempts[email] = attempts
+                return False, retry_after
+
         _otp_resend_attempts[email] = attempts
         if len(attempts) >= OTP_RESEND_MAX_ATTEMPTS:
             retry_after = int(max(1, OTP_RESEND_WINDOW_SECONDS - (now - attempts[0])))
@@ -336,28 +424,27 @@ def register():
             password_hash=password_hash,
             otp_code=otp_code,
         )
+        _log_local_otp(email, otp_code, "register")
+        otp_text_body, otp_html_body = _build_otp_email_content(otp_code)
 
         db.session.commit()
 
-        # Best-effort OTP email; account activation depends on verify step.
-        send_email(
+        # Send OTP email and fail fast if delivery request cannot be queued.
+        email_sent = send_email(
             current_app.config,
             to_email=email,
-            subject="Verify your email",
-            text_body=(
-                f"Hi {name},\n\n"
-                f"Your OTP is: {otp_code}\n"
-                f"This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.\n\n"
-                "Regards,\n"
-                "Gamified Learning Team"
-            ),
-            html_body=(
-                f"<p>Hi {name},</p>"
-                f"<p>Your OTP is: <strong>{otp_code}</strong></p>"
-                f"<p>This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.</p>"
-                "<p>Regards,<br/>Gamified Learning Team</p>"
-            ),
+            subject=OTP_EMAIL_SUBJECT,
+            text_body=otp_text_body,
+            html_body=otp_html_body,
         )
+        if not email_sent:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "OTP email delivery failed",
+                    "message": "Unable to send OTP email right now. Please try again.",
+                }
+            ), 502
     except OperationalError as exc:
         db.session.rollback()
         current_app.logger.exception("Database unavailable during register: %s", exc)
@@ -367,14 +454,18 @@ def register():
         current_app.logger.exception("Database error during register: %s", exc)
         return jsonify({"success": False, "error": "Database error", "message": "Registration failed."}), 500
 
-    return jsonify(
-        {
-            "success": True,
-            "message": "OTP sent",
-            "requires_otp": True,
-            "email": email,
-        }
-    ), 202
+    response_payload = {
+        "success": True,
+        "message": "OTP sent to your email. Check spam/promotions if not found.",
+        "requires_otp": True,
+        "email": email,
+        "sent_at": datetime.utcnow().isoformat() + "Z",
+        "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,
+    }
+    if _otp_preview_enabled():
+        response_payload["otp_preview"] = otp_code
+
+    return jsonify(response_payload), 202
 
 
 @auth_bp.post("/verify-otp")
@@ -493,28 +584,36 @@ def resend_otp():
 
         otp_code = _generate_otp()
         _update_pending_registration_otp(email, otp_code)
+        _log_local_otp(email, otp_code, "resend")
+        otp_text_body, otp_html_body = _build_otp_email_content(otp_code)
         db.session.commit()
 
-        send_email(
+        email_sent = send_email(
             current_app.config,
             to_email=email,
-            subject="Verify your email",
-            text_body=(
-                f"Hi {pending_row['name']},\n\n"
-                f"Your OTP is: {otp_code}\n"
-                f"This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.\n\n"
-                "Regards,\n"
-                "Gamified Learning Team"
-            ),
-            html_body=(
-                f"<p>Hi {pending_row['name']},</p>"
-                f"<p>Your OTP is: <strong>{otp_code}</strong></p>"
-                f"<p>This OTP is valid for {OTP_EXPIRY_MINUTES} minutes.</p>"
-                "<p>Regards,<br/>Gamified Learning Team</p>"
-            ),
+            subject=OTP_EMAIL_SUBJECT,
+            text_body=otp_text_body,
+            html_body=otp_html_body,
         )
+        if not email_sent:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "OTP email delivery failed",
+                    "message": "Unable to resend OTP right now. Please try again.",
+                }
+            ), 502
 
-        return jsonify({"success": True, "message": "OTP resent"}), 200
+        response_payload = {
+            "success": True,
+            "message": "OTP sent to your email. Check spam/promotions if not found.",
+            "sent_at": datetime.utcnow().isoformat() + "Z",
+            "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,
+        }
+        if _otp_preview_enabled():
+            response_payload["otp_preview"] = otp_code
+
+        return jsonify(response_payload), 200
     except OperationalError as exc:
         db.session.rollback()
         current_app.logger.exception("Database unavailable during OTP resend: %s", exc)
@@ -651,6 +750,90 @@ def login():
                 "message": "Login failed. Please retry.",
             }
         ), 500
+
+
+@auth_bp.post("/auth/google-login")
+def google_login():
+    try:
+        payload = request.get_json(silent=True) or {}
+        credential = str(payload.get("credential", "")).strip()
+        if not credential:
+            return jsonify({"success": False, "error": "Missing Google credential."}), 400
+
+        token_info, token_error = _verify_google_id_token(credential)
+        if token_error:
+            return jsonify({"success": False, "error": token_error}), 401
+
+        email = token_info["email"].strip().lower()
+        name = (token_info.get("name") or email.split("@")[0]).strip()[:120]
+
+        user = User.query.filter_by(email=email).first()
+        if user and user.role == "teacher" and user.is_approved is False:
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "Teacher approval pending.",
+                }
+            ), 403
+
+        if not user:
+            # password_hash is required by schema; random hash prevents password auth with empty values.
+            user = User(
+                name=name,
+                email=email,
+                password_hash=_hash_password(str(random.randint(100000, 999999))),
+                role="student",
+                is_approved=True,
+                is_verified=True,
+                otp_code=None,
+                otp_expiry=None,
+            )
+            db.session.add(user)
+            db.session.flush()
+        else:
+            user.name = user.name or name
+            user.is_verified = True
+
+        client_timezone = request.headers.get("X-User-Timezone")
+        update_user_streak(user=user, user_timezone=client_timezone)
+        newly_unlocked_badges = assign_eligible_badges(user=user, trigger="login")
+        db.session.commit()
+
+        access_token = create_access_token(
+            identity=str(user.id),
+            additional_claims={"role": user.role},
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "token": access_token,
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role,
+                    "is_verified": user.is_verified,
+                    "is_approved": user.is_approved,
+                    "level": user.level,
+                    "xp_points": user.xp_points,
+                    "coins": user.coins,
+                    "streak_count": user.streak_count,
+                    "longest_streak": user.longest_streak,
+                    "last_active_date": user.last_active_date.isoformat() if user.last_active_date else None,
+                    "daily_streak": user.daily_streak,
+                },
+                "unlocked_badges": newly_unlocked_badges,
+            }
+        )
+    except OperationalError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database unavailable during Google login: %s", exc)
+        return jsonify({"success": False, "error": "Database unavailable"}), 503
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database error during Google login: %s", exc)
+        return jsonify({"success": False, "error": "Database error"}), 500
 
 
 @auth_bp.get("/profile")

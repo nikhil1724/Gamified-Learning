@@ -1,47 +1,21 @@
 import axios from "axios";
 
-export const resolveBaseApiUrl = () => {
-  const envApiUrl = (process.env.REACT_APP_API_URL || "").trim();
-  if (envApiUrl) {
-    return envApiUrl;
-  }
+export const BASE_URL = (process.env.REACT_APP_API_URL || "https://gamified-learning.onrender.com/api")
+  .trim()
+  .replace(/\/+$/, "");
 
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host === "localhost" || host === "127.0.0.1") {
-      return "http://127.0.0.1:5000";
-    }
+console.log("API BASE URL:", BASE_URL);
 
-    // Default Vercel frontend deployments to the hosted backend.
-    if (host.endsWith("vercel.app")) {
-      return "https://gamified-learning.onrender.com";
-    }
-
-    // Custom production domain should also target hosted backend API.
-    if (host === "gamifiedlearning.quest" || host === "www.gamifiedlearning.quest") {
-      return "https://gamified-learning.onrender.com";
-    }
-
-    return window.location.origin;
-  }
-
-  return "http://127.0.0.1:5000";
-};
-
-const rawApiUrl = resolveBaseApiUrl();
-const normalizedApiUrl = rawApiUrl.replace(/\/+$/, "");
-const baseURL = normalizedApiUrl.endsWith("/api")
-  ? normalizedApiUrl
-  : `${normalizedApiUrl}/api`;
+const baseURL = BASE_URL.endsWith("/api") ? BASE_URL : `${BASE_URL}/api`;
 
 const api = axios.create({
   baseURL,
-  timeout: 30000,
+  timeout: 60000,
 });
 
 export const publicApi = axios.create({
   baseURL,
-  timeout: 30000,
+  timeout: 60000,
 });
 
 export const getApiErrorMessage = (error, fallback = "Request failed.") => {
@@ -50,7 +24,7 @@ export const getApiErrorMessage = (error, fallback = "Request failed.") => {
   }
 
   if (error.code === "ECONNABORTED" || /timeout/i.test(error.message || "")) {
-    return "Server is taking longer than expected. Please try again in a few seconds.";
+    return "Server waking up, please wait...";
   }
 
   const response = error.response?.data;
@@ -96,12 +70,40 @@ publicApi.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const isTimeout = error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
+    const config = error?.config || {};
+    if (isTimeout && !config.__timeoutRetried) {
+      config.__timeoutRetried = true;
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(api(config)), 1200);
+      });
+    }
+
+    console.error("API request failed:", error);
     if (error?.response?.status === 401 || error?.response?.status === 422) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.dispatchEvent(new Event("auth:logout"));
     }
 
+    error.userMessage = getApiErrorMessage(error);
+    return Promise.reject(error);
+  }
+);
+
+publicApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isTimeout = error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
+    const config = error?.config || {};
+    if (isTimeout && !config.__timeoutRetried) {
+      config.__timeoutRetried = true;
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(publicApi(config)), 1200);
+      });
+    }
+
+    console.error("Public API request failed:", error);
     error.userMessage = getApiErrorMessage(error);
     return Promise.reject(error);
   }
