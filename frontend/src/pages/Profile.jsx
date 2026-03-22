@@ -42,11 +42,7 @@ const Profile = () => {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        const [profileResponse, streakResponse, badgesResponse] = await Promise.all([
-          api.get("/profile"),
-          api.get("/streak"),
-          api.get("/badges"),
-        ]);
+        const profileResponse = await api.get("/profile");
         if (!isMounted) {
           return;
         }
@@ -55,24 +51,50 @@ const Profile = () => {
           name: profileResponse.data?.name || "",
           email: profileResponse.data?.email || "",
         });
+
+        const [streakResult, badgesResult] = await Promise.allSettled([
+          api.get("/streak"),
+          api.get("/badges"),
+        ]);
+
+        const streakData =
+          streakResult.status === "fulfilled" ? streakResult.value?.data : null;
         setStreak({
           current_streak:
-            streakResponse.data?.current_streak ??
+            streakData?.current_streak ??
             profileResponse.data?.streak_count ??
             profileResponse.data?.daily_streak ??
             0,
           longest_streak:
-            streakResponse.data?.longest_streak ?? profileResponse.data?.longest_streak ?? 0,
+            streakData?.longest_streak ?? profileResponse.data?.longest_streak ?? 0,
           last_active_date:
-            streakResponse.data?.last_active_date ?? profileResponse.data?.last_active_date ?? null,
+            streakData?.last_active_date ?? profileResponse.data?.last_active_date ?? null,
         });
-        setBadges(Array.isArray(badgesResponse.data) ? badgesResponse.data : []);
-        setError("");
+
+        if (badgesResult.status === "fulfilled") {
+          setBadges(Array.isArray(badgesResult.value?.data) ? badgesResult.value.data : []);
+        } else {
+          setBadges([]);
+        }
+
+        const warnings = [];
+        if (streakResult.status === "rejected") {
+          warnings.push("streak");
+        }
+        if (badgesResult.status === "rejected") {
+          warnings.push("badges");
+        }
+
+        if (warnings.length > 0) {
+          setError(`Some profile sections could not load (${warnings.join(", ")}).`);
+        } else {
+          setError("");
+        }
       } catch (err) {
         if (!isMounted) {
           return;
         }
-        const message = err?.response?.data?.error || "Failed to load profile.";
+        const message = getApiErrorMessage(err, "Failed to load profile.");
         setError(message);
       } finally {
         if (isMounted) {
