@@ -7,6 +7,7 @@ import json
 import ssl
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
 from config import SENDER_EMAIL
 
@@ -41,9 +42,22 @@ def _normalize_resend_api_url(config):
     ).strip()
 
     if configured.endswith("/emails"):
-        return configured[: -len("/emails")]
+        configured = configured[: -len("/emails")]
 
-    return configured.rstrip("/")
+    configured = configured.rstrip("/")
+    parsed = urlsplit(configured)
+    host = (parsed.netloc or "").lower()
+
+    # Protect against misconfigured values like https://resend.com that trigger
+    # Cloudflare 403 (error code 1010) instead of Resend API responses.
+    if host and host != "api.resend.com":
+        logger.warning(
+            "Invalid RESEND_API_URL host '%s'; forcing https://api.resend.com",
+            host,
+        )
+        return "https://api.resend.com"
+
+    return configured or "https://api.resend.com"
 
 
 def _resend_enabled(config):
@@ -154,6 +168,8 @@ def send_email(config, to_email, subject, text_body, html_body=None):
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "gamified-learning-email/1.0",
     }
 
     ssl_context = None
