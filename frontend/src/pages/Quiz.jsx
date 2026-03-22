@@ -25,6 +25,7 @@ const Quiz = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [timeUpSubmitted, setTimeUpSubmitted] = useState(false);
+  const [timerInitialized, setTimerInitialized] = useState(false);
   const [showXpGain, setShowXpGain] = useState(false);
   const [confettiSize, setConfettiSize] = useState({
     width: window.innerWidth,
@@ -80,6 +81,9 @@ const Quiz = () => {
     setResult(null);
     setAnswers({});
     setCurrentIndex(0);
+    setTimerInitialized(false);
+    setTimeLeft(0);
+    setTimeUpSubmitted(false);
     setError("");
 
     try {
@@ -222,6 +226,7 @@ const Quiz = () => {
     setShowAchievement(false);
     setTimeLeft(0);
     setTimeUpSubmitted(false);
+    setTimerInitialized(false);
     setError("");
   };
 
@@ -232,6 +237,7 @@ const Quiz = () => {
 
     setTimeLeft(questions.length * 30);
     setTimeUpSubmitted(false);
+    setTimerInitialized(true);
   }, [selectedQuiz, result, questions.length]);
 
   useEffect(() => {
@@ -251,13 +257,14 @@ const Quiz = () => {
       selectedQuiz &&
       !result &&
       questions.length > 0 &&
+      timerInitialized &&
       timeLeft === 0 &&
       !timeUpSubmitted
     ) {
       setTimeUpSubmitted(true);
       handleSubmit();
     }
-  }, [selectedQuiz, result, questions.length, timeLeft, timeUpSubmitted]);
+  }, [selectedQuiz, result, questions.length, timeLeft, timeUpSubmitted, timerInitialized]);
 
   const timerLabel = useMemo(() => {
     const minutes = Math.floor(timeLeft / 60);
@@ -415,6 +422,7 @@ const Quiz = () => {
                 setCurrentIndex(0);
                 setTimeUpSubmitted(false);
                 setTimeLeft(questions.length * 30);
+                setTimerInitialized(true);
               }}>
                 Retry Quiz
               </button>

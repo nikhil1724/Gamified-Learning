@@ -44,6 +44,9 @@ const LessonPage = () => {
   const [completedLessons, setCompletedLessons] = useState([]);
   const [isCompleted, setIsCompleted] = useState(false);
   const [showPlayground, setShowPlayground] = useState(false);
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const [completeMessage, setCompleteMessage] = useState('');
+  const [completeError, setCompleteError] = useState('');
 
   // Fetch completed lessons
   useEffect(() => {
@@ -132,12 +135,25 @@ const LessonPage = () => {
   }, [isMobileView, sidebarOpen]);
 
   const handleMarkComplete = async () => {
+    if (isMarkingComplete) {
+      return;
+    }
+
     try {
+      setIsMarkingComplete(true);
+      setCompleteError('');
       await api.post(`/lesson-progress/${course}/${lesson}`);
       setIsCompleted(true);
-      setCompletedLessons([...completedLessons, parseInt(lesson)]);
+      const lessonNumber = parseInt(lesson);
+      setCompletedLessons((prev) => (
+        prev.includes(lessonNumber) ? prev : [...prev, lessonNumber]
+      ));
+      setCompleteMessage('Lesson marked as complete. Great progress!');
     } catch (error) {
       console.error('Error marking lesson complete:', error);
+      setCompleteError(error?.response?.data?.error || 'Failed to mark lesson complete. Please try again.');
+    } finally {
+      setIsMarkingComplete(false);
     }
   };
 
@@ -327,9 +343,15 @@ const LessonPage = () => {
               <button 
                 className={`btn ${isCompleted ? 'btn-success' : 'btn-outline-success'}`}
                 onClick={handleMarkComplete}
+                disabled={isCompleted || isMarkingComplete}
                 style={{ flex: '1', minWidth: '200px' }}
               >
-                {isCompleted ? (
+                {isMarkingComplete ? (
+                  <>
+                    <i className="bi bi-hourglass-split me-2"></i>
+                    Saving...
+                  </>
+                ) : isCompleted ? (
                   <>
                     <i className="bi bi-check-circle-fill me-2"></i>
                     Lesson Completed
@@ -350,6 +372,18 @@ const LessonPage = () => {
                 {showPlayground ? 'Hide' : 'Try'} Code Playground
               </button>
             </div>
+
+            {completeMessage ? (
+              <div className="alert alert-success" role="status">
+                {completeMessage}
+              </div>
+            ) : null}
+
+            {completeError ? (
+              <div className="alert alert-danger" role="alert">
+                {completeError}
+              </div>
+            ) : null}
 
             {/* Quiz Section */}
             <div className="quiz-section">

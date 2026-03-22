@@ -39,6 +39,40 @@ def _is_instructor(user):
     return bool(user and user.role in {"teacher", "admin"} and (user.role == "admin" or user.is_approved))
 
 
+def _get_ordered_course_lessons(course_id: int):
+    return Lesson.query.filter_by(course_id=course_id).order_by(Lesson.id.asc()).all()
+
+
+def _resolve_lesson_for_course(course_id: int, lesson_ref: int):
+    """Resolve a lesson by db id first, then fallback to 1-based lesson order index."""
+    lesson = Lesson.query.filter_by(id=lesson_ref, course_id=course_id).first()
+    if lesson:
+        return lesson
+
+    if lesson_ref <= 0:
+        return None
+
+    ordered_lessons = _get_ordered_course_lessons(course_id)
+    idx = lesson_ref - 1
+    if idx >= len(ordered_lessons):
+        return None
+
+    return ordered_lessons[idx]
+
+
+def _to_lesson_sequence_numbers(course_id: int, lesson_ids):
+    """Map db lesson ids to stable 1-based order numbers used by slug-based lesson pages."""
+    ordered_lessons = _get_ordered_course_lessons(course_id)
+    if not ordered_lessons:
+        return []
+
+    position_by_lesson_id = {lesson.id: index + 1 for index, lesson in enumerate(ordered_lessons)}
+    sequence_numbers = [position_by_lesson_id.get(lesson_id) for lesson_id in lesson_ids]
+    sequence_numbers = [num for num in sequence_numbers if num is not None]
+    # Preserve unique values in sorted order for deterministic UI rendering.
+    return sorted(set(sequence_numbers))
+
+
 def _internal_error_response(endpoint_name: str, error: Exception):
     current_app.logger.exception("Lesson progress endpoint failed (%s): %s", endpoint_name, error)
     return jsonify({"error": "Internal server error"}), 500
@@ -178,7 +212,7 @@ def mark_lesson_complete(course, lesson_id):
         if not course_id:
             return jsonify({"error": "Course not found"}), 404
 
-        lesson = Lesson.query.filter_by(id=lesson_id, course_id=course_id).first()
+        lesson = _resolve_lesson_for_course(course_id, lesson_id)
         if not lesson:
             return jsonify({"error": "Lesson not found"}), 404
         
@@ -196,7 +230,7 @@ def mark_lesson_complete(course, lesson_id):
             progress = LessonProgress(
                 user_id=user.id,
                 course_id=course_id,
-                lesson_id=lesson_id,
+                lesson_id=lesson.id,
                 completed=True,
                 completed_at=datetime.utcnow()
             )
@@ -207,12 +241,13 @@ def mark_lesson_complete(course, lesson_id):
         try:
             record_learning_activity(user.id)
         except Exception:
-            db.session.rollback()
+            current_app.logger.warning("Failed to record learning activity for user %s", user.id)
         
         return jsonify({
             'message': 'Lesson marked as complete',
             'course_id': course_id,
-            'lesson_id': lesson_id
+            'lesson_id': lesson_id,
+            'resolved_lesson_id': lesson.id,
         }), 200
         
     except Exception as e:
@@ -239,11 +274,12 @@ def get_course_progress(course):
         ).all()
         
         lesson_ids = [p.lesson_id for p in completed_lessons]
+        normalized_lesson_ids = _to_lesson_sequence_numbers(course_id, lesson_ids)
         
         return jsonify({
             'course_id': course_id,
-            'completed_lessons': lesson_ids,
-            'total_completed': len(lesson_ids)
+            'completed_lessons': normalized_lesson_ids,
+            'total_completed': len(normalized_lesson_ids)
         }), 200
         
     except Exception as e:
@@ -291,10 +327,14 @@ def unmark_lesson(course, lesson_id):
         if not course_id:
             return jsonify({"error": "Course not found"}), 404
         
+        lesson = _resolve_lesson_for_course(course_id, lesson_id)
+        if not lesson:
+            return jsonify({"error": "Lesson not found"}), 404
+
         progress = LessonProgress.query.filter_by(
             user_id=user.id,
             course_id=course_id,
-            lesson_id=lesson_id
+            lesson_id=lesson.id
         ).first()
         
         if progress:

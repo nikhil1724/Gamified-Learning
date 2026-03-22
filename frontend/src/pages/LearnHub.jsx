@@ -44,15 +44,17 @@ const courses = [
     description: 'Master modern JavaScript including ES6+, async programming, and DOM manipulation.',
     icon: '🟨',
     color: '#f7df1e',
-    lessons: 0,
-    duration: 'Coming Soon',
+    lessons: 8,
+    duration: '75 min est.',
     level: 'Beginner',
     category: 'Web Development',
     xpReward: 260,
     topics: ['ES6+', 'DOM', 'Async/Await', 'APIs', 'React'],
     students: 0,
     rating: 0,
-    comingSoon: true
+    comingSoon: true,
+    statusLabel: 'Preview Track',
+    nextDrop: 'Module 1 planned this month'
   },
   {
     id: 'cpp',
@@ -60,15 +62,17 @@ const courses = [
     description: 'Deep dive into C++ with modern features, data structures, and algorithms.',
     icon: '⚙️',
     color: '#00599c',
-    lessons: 0,
-    duration: 'Coming Soon',
+    lessons: 10,
+    duration: '90 min est.',
     level: 'Intermediate',
     category: 'Data Structures',
     xpReward: 320,
     topics: ['Pointers', 'STL', 'Templates', 'Memory', 'Performance'],
     students: 0,
     rating: 0,
-    comingSoon: true
+    comingSoon: true,
+    statusLabel: 'Preview Track',
+    nextDrop: 'Core lessons under review'
   }
 ];
 
@@ -224,7 +228,7 @@ const LearnHub = () => {
                     <div className="course-header" style={{ background: course.color }}>
                       <div className="course-icon-large">{course.icon}</div>
                       {course.comingSoon && (
-                        <div className="coming-soon-badge">Coming Soon</div>
+                        <div className="coming-soon-badge">{course.statusLabel || 'Preview'}</div>
                       )}
                     </div>
 
@@ -272,6 +276,18 @@ const LearnHub = () => {
                             </span>
                           </div>
                         )}
+                        {course.comingSoon && (
+                          <div className="meta-row">
+                            <span>
+                              <span className="meta-icon">🗺️</span>
+                              Structured learning roadmap
+                            </span>
+                            <span>
+                              <span className="meta-icon">🗓️</span>
+                              {course.nextDrop || 'Next module planned'}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="course-topics">
@@ -300,7 +316,7 @@ const LearnHub = () => {
                     <div className="course-footer">
                       {course.comingSoon ? (
                         <button className="btn btn-course disabled" disabled>
-                          Coming Soon
+                          Syllabus Preview
                         </button>
                       ) : (
                         <Link 
