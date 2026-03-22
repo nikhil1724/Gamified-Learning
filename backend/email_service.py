@@ -3,8 +3,10 @@ import logging
 import time
 import traceback
 from email.utils import parseaddr
-
-import requests
+import json
+import ssl
+import urllib.error
+import urllib.request
 
 from config import SENDER_EMAIL
 
@@ -154,29 +156,40 @@ def send_email(config, to_email, subject, text_body, html_body=None):
         "Content-Type": "application/json",
     }
 
+    ssl_context = None
+    if not ssl_verify:
+        ssl_context = ssl._create_unverified_context()
+
     for attempt in range(2):
         try:
-            response = requests.post(
+            request_data = json.dumps(payload).encode("utf-8")
+            request = urllib.request.Request(
                 endpoint,
-                json=payload,
+                data=request_data,
                 headers=headers,
-                timeout=30,
-                verify=ssl_verify,
+                method="POST",
             )
-            response_text = response.text
+            with urllib.request.urlopen(
+                request,
+                timeout=30,
+                context=ssl_context,
+            ) as response:
+                status_code = response.getcode()
+                response_text = response.read().decode("utf-8", errors="replace")
+
             print("RESEND RESPONSE:", response_text)
             logger.info(
                 "Resend HTTP response status=%s body=%s to=%s subject=%s attempt=%s",
-                response.status_code,
+                status_code,
                 response_text,
                 to_email,
                 subject,
                 attempt + 1,
             )
 
-            if 200 <= response.status_code < 300:
+            if 200 <= status_code < 300:
                 try:
-                    body = response.json()
+                    body = json.loads(response_text) if response_text else {}
                 except Exception:
                     body = {}
                 message_id = _extract_message_id(body)
@@ -191,7 +204,27 @@ def send_email(config, to_email, subject, text_body, html_body=None):
 
             logger.error(
                 "Resend non-success status=%s to=%s subject=%s attempt=%s body=%s",
-                response.status_code,
+                status_code,
+                to_email,
+                subject,
+                attempt + 1,
+                response_text,
+            )
+        except urllib.error.HTTPError as exc:
+            status_code = exc.code
+            response_text = exc.read().decode("utf-8", errors="replace")
+            print("RESEND RESPONSE:", response_text)
+            logger.info(
+                "Resend HTTP response status=%s body=%s to=%s subject=%s attempt=%s",
+                status_code,
+                response_text,
+                to_email,
+                subject,
+                attempt + 1,
+            )
+            logger.error(
+                "Resend non-success status=%s to=%s subject=%s attempt=%s body=%s",
+                status_code,
                 to_email,
                 subject,
                 attempt + 1,
