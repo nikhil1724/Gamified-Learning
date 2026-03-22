@@ -2,10 +2,30 @@ from functools import wraps
 
 from flask import Blueprint, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from database import db
-from models import Course, Quiz, User
+from models import (
+    CodeSubmission,
+    CodingProblem,
+    Course,
+    Enrollment,
+    LearningActivity,
+    LessonProgress,
+    Note,
+    Notification,
+    Problem,
+    ProblemProgress,
+    Progress,
+    Quiz,
+    QuizAttempt,
+    Submission,
+    User,
+    UserBadge,
+    UserCodingStats,
+    UserReward,
+    UserSkill,
+)
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -109,7 +129,46 @@ def delete_user(user_id):
     if target_user.role == "admin":
         return jsonify({"success": False, "error": "Deleting admin accounts is not allowed."}), 403
 
+    if target_user.role == "teacher":
+        assigned_courses = Course.query.filter_by(teacher_id=target_user.id).count()
+        if assigned_courses > 0:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Teacher has assigned courses. Reassign or remove courses before deleting this account.",
+                    }
+                ),
+                409,
+            )
+
     try:
+        # Remove dependent records first to avoid foreign key constraint failures.
+        UserReward.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        UserSkill.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        UserBadge.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        Progress.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        QuizAttempt.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        Submission.query.filter_by(student_id=target_user.id).delete(synchronize_session=False)
+        Enrollment.query.filter_by(student_id=target_user.id).delete(synchronize_session=False)
+        LessonProgress.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        Notification.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        LearningActivity.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        ProblemProgress.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        CodeSubmission.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+        UserCodingStats.query.filter_by(user_id=target_user.id).delete(synchronize_session=False)
+
+        # Keep authored content but detach from deleted account where possible.
+        Note.query.filter_by(uploaded_by=target_user.id).delete(synchronize_session=False)
+        Problem.query.filter_by(created_by=target_user.id).update(
+            {Problem.created_by: current_admin_id},
+            synchronize_session=False,
+        )
+        CodingProblem.query.filter_by(created_by=target_user.id).update(
+            {CodingProblem.created_by: current_admin_id},
+            synchronize_session=False,
+        )
+
         db.session.delete(target_user)
         db.session.commit()
     except IntegrityError:
@@ -122,6 +181,17 @@ def delete_user(user_id):
                 }
             ),
             409,
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Failed to delete user due to a database error.",
+                }
+            ),
+            500,
         )
 
     return jsonify({"success": True, "data": {"user_id": user_id}})
