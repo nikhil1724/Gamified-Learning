@@ -2,6 +2,7 @@ import os
 import logging
 import time
 import traceback
+from email.utils import parseaddr
 
 import requests
 
@@ -9,6 +10,20 @@ from config import SENDER_EMAIL
 
 
 logger = logging.getLogger(__name__)
+
+
+RESEND_DEFAULT_FROM = "Gamified Learning <onboarding@resend.dev>"
+_PERSONAL_MAILBOX_DOMAINS = {
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+    "icloud.com",
+    "aol.com",
+    "proton.me",
+    "protonmail.com",
+}
 
 
 def _normalize_resend_api_url(config):
@@ -37,13 +52,32 @@ def _resend_enabled(config):
 
 
 def _resolve_sender(config):
-    return (
+    sender = (
         (config.get("RESEND_FROM_EMAIL") or "").strip()
         or (config.get("EMAIL_FROM") or "").strip()
         or (os.environ.get("RESEND_FROM_EMAIL") or "").strip()
         or (os.environ.get("EMAIL_FROM") or "").strip()
         or SENDER_EMAIL
     )
+
+    _, sender_email = parseaddr(sender)
+    sender_email = (sender_email or "").strip().lower()
+    sender_domain = sender_email.split("@")[-1] if "@" in sender_email else ""
+
+    if not sender_email:
+        logger.warning("Invalid sender format '%s'. Falling back to %s.", sender, RESEND_DEFAULT_FROM)
+        return RESEND_DEFAULT_FROM
+
+    # Resend requires verified domains or allowed sandbox sender identities.
+    if sender_domain in _PERSONAL_MAILBOX_DOMAINS:
+        logger.warning(
+            "Sender domain '%s' is a personal mailbox and typically not allowed by Resend. Falling back to %s.",
+            sender_domain,
+            RESEND_DEFAULT_FROM,
+        )
+        return RESEND_DEFAULT_FROM
+
+    return sender
 
 
 def _ssl_verify_enabled(config):

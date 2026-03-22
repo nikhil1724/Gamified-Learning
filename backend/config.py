@@ -140,7 +140,9 @@ class Config:
     RUN_STARTUP_TASKS = os.getenv("RUN_STARTUP_TASKS", "false").lower() == "true"
 
     # Email configuration (Resend)
+    OTP_EMAIL_PROVIDER = os.getenv("OTP_EMAIL_PROVIDER", "resend").strip().lower()
     EMAIL_FROM = os.getenv("EMAIL_FROM", SENDER_EMAIL)
+    RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "")
     RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
     RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com")
 

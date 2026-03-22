@@ -74,6 +74,23 @@ def _build_otp_email_content(otp_code: str) -> tuple[str, str]:
     return text_body, html_body
 
 
+def _send_otp_email(email: str, text_body: str, html_body: str) -> bool:
+    provider = (current_app.config.get("OTP_EMAIL_PROVIDER") or "resend").strip().lower()
+    if provider not in {"resend", ""}:
+        current_app.logger.warning(
+            "Unsupported OTP_EMAIL_PROVIDER=%s configured; falling back to resend.",
+            provider,
+        )
+
+    return send_email(
+        current_app.config,
+        to_email=email,
+        subject=OTP_EMAIL_SUBJECT,
+        text_body=text_body,
+        html_body=html_body,
+    )
+
+
 def _get_google_client_id() -> str:
     return (current_app.config.get("GOOGLE_CLIENT_ID") or "").strip()
 
@@ -426,10 +443,8 @@ def register():
         db.session.commit()
 
         # Send OTP email and fail fast if delivery request cannot be queued.
-        email_sent = send_email(
-            current_app.config,
-            to_email=email,
-            subject=OTP_EMAIL_SUBJECT,
+        email_sent = _send_otp_email(
+            email=email,
             text_body=otp_text_body,
             html_body=otp_html_body,
         )
@@ -584,10 +599,8 @@ def resend_otp():
         otp_text_body, otp_html_body = _build_otp_email_content(otp_code)
         db.session.commit()
 
-        email_sent = send_email(
-            current_app.config,
-            to_email=email,
-            subject=OTP_EMAIL_SUBJECT,
+        email_sent = _send_otp_email(
+            email=email,
             text_body=otp_text_body,
             html_body=otp_html_body,
         )
