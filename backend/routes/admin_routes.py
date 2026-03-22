@@ -2,6 +2,7 @@ from functools import wraps
 
 from flask import Blueprint, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from sqlalchemy.exc import IntegrityError
 
 from database import db
 from models import Course, Quiz, User
@@ -92,6 +93,38 @@ def list_users():
         for user in users
     ]
     return jsonify({"success": True, "data": data})
+
+
+@admin_bp.delete("/users/<int:user_id>")
+@role_required("admin")
+def delete_user(user_id):
+    current_admin_id = int(get_jwt_identity())
+    if user_id == current_admin_id:
+        return jsonify({"success": False, "error": "You cannot delete your own account."}), 400
+
+    target_user = User.query.get(user_id)
+    if not target_user:
+        return jsonify({"success": False, "error": "User not found"}), 404
+
+    if target_user.role == "admin":
+        return jsonify({"success": False, "error": "Deleting admin accounts is not allowed."}), 403
+
+    try:
+        db.session.delete(target_user)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "User cannot be deleted because related records still exist.",
+                }
+            ),
+            409,
+        )
+
+    return jsonify({"success": True, "data": {"user_id": user_id}})
 
 
 @admin_bp.put("/approve-teacher/<int:teacher_id>")

@@ -18,6 +18,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [approvingIds, setApprovingIds] = useState([]);
+  const [deletingIds, setDeletingIds] = useState([]);
 
   const fetchAdminData = async () => {
     try {
@@ -57,6 +58,42 @@ const AdminDashboard = () => {
       setError(err?.response?.data?.error || "Failed to approve teacher.");
     } finally {
       setApprovingIds((prev) => prev.filter((id) => id !== userId));
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!user?.id || deletingIds.includes(user.id)) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete user \"${user.name}\" (${user.email})? This action cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingIds((prev) => [...prev, user.id]);
+      setError("");
+      await api.delete(`/admin/users/${user.id}`);
+      setUsers((prev) => prev.filter((item) => item.id !== user.id));
+      setStats((prev) => ({
+        ...prev,
+        total_users: Math.max(0, (prev.total_users || 0) - 1),
+        total_students:
+          user.role === "student"
+            ? Math.max(0, (prev.total_students || 0) - 1)
+            : prev.total_students,
+        total_teachers:
+          user.role === "teacher"
+            ? Math.max(0, (prev.total_teachers || 0) - 1)
+            : prev.total_teachers,
+      }));
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to delete user.");
+    } finally {
+      setDeletingIds((prev) => prev.filter((id) => id !== user.id));
     }
   };
 
@@ -156,18 +193,39 @@ const AdminDashboard = () => {
                         </td>
                         <td>
                           {user.role === "teacher" && !user.is_approved ? (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-primary"
-                              onClick={() => handleApprove(user.id)}
-                              disabled={approvingIds.includes(user.id)}
-                            >
-                              {approvingIds.includes(user.id)
-                                ? "Approving..."
-                                : "Approve"}
-                            </button>
+                            <div className="d-flex gap-2">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-primary"
+                                onClick={() => handleApprove(user.id)}
+                                disabled={approvingIds.includes(user.id) || deletingIds.includes(user.id)}
+                              >
+                                {approvingIds.includes(user.id)
+                                  ? "Approving..."
+                                  : "Approve"}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDeleteUser(user)}
+                                disabled={deletingIds.includes(user.id) || approvingIds.includes(user.id)}
+                              >
+                                {deletingIds.includes(user.id) ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
                           ) : (
-                            <span className="text-muted small">No action</span>
+                            user.role !== "admin" ? (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDeleteUser(user)}
+                                disabled={deletingIds.includes(user.id)}
+                              >
+                                {deletingIds.includes(user.id) ? "Deleting..." : "Delete"}
+                              </button>
+                            ) : (
+                              <span className="text-muted small">No action</span>
+                            )
                           )}
                         </td>
                       </tr>
