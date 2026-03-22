@@ -575,12 +575,14 @@ const Quiz = () => {
                     { key: "B", label: currentQuestion.option_b },
                     { key: "C", label: currentQuestion.option_c },
                     { key: "D", label: currentQuestion.option_d },
-                  ].map((option) => (
+                  ].map((option) => {
+                    const isSelected = answers[currentQuestion.id] === option.key;
+                    return (
                     <label
                       key={option.key}
                       htmlFor={`question-${currentQuestion.id}-${option.key}`}
-                      className={`list-group-item d-flex gap-2 align-items-center ${
-                        answers[currentQuestion.id] === option.key ? "active" : ""
+                      className={`list-group-item quiz-option d-flex gap-2 align-items-center ${
+                        isSelected ? "is-selected" : ""
                       }`}
                     >
                       <input
@@ -589,14 +591,15 @@ const Quiz = () => {
                         className="form-check-input"
                         name={`question-${currentQuestion.id}`}
                         value={option.key}
-                        checked={answers[currentQuestion.id] === option.key}
+                        checked={isSelected}
                         onChange={() =>
                           handleAnswerChange(currentQuestion.id, option.key)
                         }
                       />
-                      <span>{option.label}</span>
+                      <span className="quiz-option__label">{option.label}</span>
                     </label>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="d-flex flex-wrap gap-2 justify-content-between">
