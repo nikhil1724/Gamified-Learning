@@ -263,6 +263,80 @@
   font-size: 0.95rem;
 }
 
+.platform-info-section {
+  padding: 10px 0 48px;
+}
+
+.platform-info-card {
+  background: linear-gradient(140deg, #1f3b9f 0%, #1f5ab2 55%, #2f6ec3 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f8fbff;
+  border-radius: 18px;
+  padding: 36px 30px;
+  box-shadow: 0 18px 34px rgba(21, 44, 118, 0.24);
+}
+
+.platform-info-card h2 {
+  margin: 0;
+  font-size: clamp(1.55rem, 2.8vw, 2.25rem);
+  color: #ffffff;
+}
+
+.platform-info-card > p {
+  margin: 14px 0 26px;
+  max-width: 880px;
+  color: rgba(248, 251, 255, 0.92);
+  line-height: 1.7;
+}
+
+.platform-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.platform-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  padding: 14px 14px;
+}
+
+.platform-info-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.26);
+  color: #ffffff;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.platform-info-item h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  color: #ffffff;
+}
+
+.platform-info-item p {
+  margin: 4px 0 0;
+  color: rgba(248, 251, 255, 0.88);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.platform-info-footer {
+  margin: 20px 0 0;
+  color: rgba(248, 251, 255, 0.8);
+  font-size: 0.92rem;
+}
+
 .stats-section {
   padding: 24px 0 74px;
 }
@@ -351,6 +425,10 @@
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 22px 14px;
+  }
+
+  .platform-info-grid {
+    grid-template-columns: 1fr;
   }
 }
 

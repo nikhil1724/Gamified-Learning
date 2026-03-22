@@ -34,6 +34,25 @@ const stats = [
   { value: "Live", label: "Real-time Leaderboard" },
 ];
 
+const platformHighlights = [
+  {
+    title: "Adaptive Learning",
+    description: "Personalized content based on your pace and performance.",
+  },
+  {
+    title: "Gamified Progress",
+    description: "Earn XP, unlock badges, and climb the leaderboard.",
+  },
+  {
+    title: "Real-time Analytics",
+    description: "Track your progress with detailed performance insights.",
+  },
+  {
+    title: "Expert Content",
+    description: "Learn from curated courses and community-driven problems.",
+  },
+];
+
 const Home = () => {
   const pageRef = useRef(null);
 
@@ -118,6 +137,34 @@ const Home = () => {
                   <p>{feature.description}</p>
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="platform-info-section">
+          <div className="container">
+            <div className="platform-info-card reveal-on-scroll">
+              <h2>Master Skills Through Gamified Learning</h2>
+              <p>
+                Join thousands of learners who are leveling up their skills through interactive quizzes,
+                adaptive learning paths, and competitive challenges.
+              </p>
+              <div className="platform-info-grid">
+                {platformHighlights.map((item, index) => (
+                  <article
+                    className="platform-info-item"
+                    key={item.title}
+                    style={{ "--stagger-delay": `${index * 90}ms` }}
+                  >
+                    <span className="platform-info-item__icon" aria-hidden="true">✓</span>
+                    <div>
+                      <h3>{item.title}</h3>
+                      <p>{item.description}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <p className="platform-info-footer">Trusted by learners worldwide. Start your journey today.</p>
             </div>
           </div>
         </section>

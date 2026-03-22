@@ -24,6 +24,7 @@ const RoleSelect = () => {
     <AuthLayout
       title="Choose Your Role"
       stacked
+      showSidebar={false}
     >
       <div className="role-select-cards">
         <motion.div
