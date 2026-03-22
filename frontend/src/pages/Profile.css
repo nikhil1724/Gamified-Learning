@@ -1,6 +1,9 @@
 .profile-page {
   min-height: calc(100vh - 72px);
-  background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 56%, #ffffff 100%);
+  background:
+    radial-gradient(circle at 15% 18%, rgba(57, 111, 237, 0.12), transparent 28%),
+    radial-gradient(circle at 90% 12%, rgba(20, 184, 166, 0.14), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f1f6ff 52%, #ffffff 100%);
 }
 
 .profile-side {
@@ -15,9 +18,10 @@
   flex-wrap: wrap;
   gap: 16px;
   padding: 20px 24px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
-  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #eef4ff 0%, #f9fbff 100%);
+  border: 1px solid #dbe7fb;
+  box-shadow: 0 12px 30px rgba(37, 69, 152, 0.08);
 }
 
 .streak-pill {
@@ -55,32 +59,33 @@
 .profile-hero__avatar {
   width: 64px;
   height: 64px;
-  border-radius: 18px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 22px;
-  color: #1f2a37;
-  background: #fff1c7;
-  border: 1px solid #f3d087;
+  color: #e8eeff;
+  background: linear-gradient(135deg, #2648a4 0%, #3267d6 55%, #55a5ff 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 8px 16px rgba(41, 86, 198, 0.25);
 }
 
 .profile-card {
   background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  border: 1px solid #dfe7f5;
   padding: 20px 22px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 24px rgba(20, 45, 110, 0.08);
 }
 
 .profile-card--circle {
-  border-radius: 999px;
-  width: min(360px, 100%);
-  height: 360px;
+  border-radius: 16px;
+  width: min(380px, 100%);
+  min-height: 320px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 28px;
 }
 
@@ -96,11 +101,29 @@
 
 .profile-form .form-control {
   border-radius: 12px;
+  min-height: 44px;
+  border: 1px solid #d6dfef;
+}
+
+.profile-form .form-control:focus {
+  border-color: #3f74df;
+  box-shadow: 0 0 0 3px rgba(63, 116, 223, 0.15);
 }
 
 .profile-actions {
   display: flex;
   gap: 12px;
+}
+
+.profile-btn-primary,
+.profile-btn-secondary {
+  min-width: 138px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.profile-btn-primary {
+  box-shadow: 0 8px 18px rgba(43, 98, 223, 0.26);
 }
 
 .profile-loading {
@@ -131,10 +154,10 @@
 }
 
 .stat-tile {
-  background: #f8fbff;
+  background: linear-gradient(180deg, #f7faff 0%, #edf4ff 100%);
   border-radius: 12px;
   padding: 14px;
-  border: 1px solid var(--color-border);
+  border: 1px solid #dce7f7;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -170,7 +193,7 @@
 
   .profile-card--circle {
     border-radius: 16px;
-    height: auto;
+    min-height: auto;
     width: 100%;
   }
 
@@ -192,10 +215,6 @@
 
   .profile-side {
     padding-right: 0 !important;
-  }
-
-  .profile-card--circle {
-    margin-right: 0;
   }
 
   .profile-card--circle {

@@ -857,6 +857,9 @@ def profile():
 
 
 @auth_bp.patch("/profile")
+@auth_bp.patch("/auth/profile")
+@auth_bp.put("/profile")
+@auth_bp.put("/auth/profile")
 @jwt_required()
 def update_profile():
     user_id = get_jwt_identity()

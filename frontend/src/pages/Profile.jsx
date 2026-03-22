@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import BadgeShowcase from "../components/BadgeShowcase";
 import PageTransition from "../components/PageTransition";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+import api, { getApiErrorMessage } from "../services/api";
 import "./Profile.css";
 
 const Profile = () => {
@@ -23,6 +23,18 @@ const Profile = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    setProfile((prev) => prev || user);
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+    });
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -106,6 +118,7 @@ const Profile = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    setError("");
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -130,15 +143,27 @@ const Profile = () => {
 
     try {
       setSaving(true);
+      const nextName = formData.name.trim();
+      const nextEmail = formData.email.trim().toLowerCase();
+
+      if (nextName === (profile?.name || "").trim() && nextEmail === (profile?.email || "").trim().toLowerCase()) {
+        setSuccess("No changes to save.");
+        return;
+      }
+
       const response = await api.patch("/profile", {
-        name: formData.name,
-        email: formData.email,
+        name: nextName,
+        email: nextEmail,
       });
       setProfile(response.data);
+      setFormData({
+        name: response.data?.name || "",
+        email: response.data?.email || "",
+      });
       updateUser(response.data);
       setSuccess("Profile updated successfully.");
     } catch (err) {
-      const message = err?.response?.data?.error || "Update failed.";
+      const message = getApiErrorMessage(err, "Unable to update profile right now.");
       setError(message);
     } finally {
       setSaving(false);
@@ -274,14 +299,14 @@ const Profile = () => {
                   <div className="profile-actions">
                     <button
                       type="submit"
-                      className="btn btn-primary"
+                      className="btn btn-primary profile-btn-primary"
                       disabled={saving}
                     >
                       {saving ? "Saving..." : "Save Changes"}
                     </button>
                     <button
                       type="button"
-                      className="btn btn-outline-secondary"
+                      className="btn btn-outline-secondary profile-btn-secondary"
                       onClick={handleReset}
                       disabled={saving}
                     >
