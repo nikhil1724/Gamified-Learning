@@ -17,6 +17,7 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "student",
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,7 +60,7 @@ const Register = () => {
     setError("");
     setSubmitAttempted(true);
 
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email || !formData.password || !formData.role) {
       setError("Please fill out all fields.");
       return;
     }
@@ -75,6 +76,7 @@ const Register = () => {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        role: formData.role,
       });
       if (response?.data?.requires_otp) {
         navigate(`/verify-otp?email=${encodeURIComponent(response.data.email || formData.email)}`, {
@@ -130,6 +132,7 @@ const Register = () => {
           : formData.confirmPassword && formData.password !== formData.confirmPassword
           ? "Passwords do not match."
           : "",
+      role: submitAttempted && !formData.role ? "Please select a role." : "",
     }),
     [formData, submitAttempted]
   );
@@ -239,6 +242,27 @@ const Register = () => {
             <div className="text-danger small mt-1">
               {inlineErrors.confirmPassword}
             </div>
+          ) : null}
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="role">
+            Select Role
+          </label>
+          <select
+            id="role"
+            name="role"
+            className="form-control"
+            value={formData.role}
+            onChange={handleChange}
+            required
+          >
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+          </select>
+
+          {inlineErrors.role ? (
+            <div className="text-danger small mt-1">{inlineErrors.role}</div>
           ) : null}
         </div>
 

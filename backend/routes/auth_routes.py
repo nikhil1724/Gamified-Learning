@@ -33,6 +33,14 @@ _otp_resend_lock = threading.Lock()
 _otp_resend_attempts = {}
 
 
+def _normalize_signup_role(raw_role: str | None) -> str:
+    role = (raw_role or "").strip().lower()
+    # Keep role compatibility with existing authorization checks.
+    if role == "teacher":
+        return "teacher"
+    return "student"
+
+
 def _generate_otp() -> str:
     return f"{random.randint(0, 999999):06d}"
 
@@ -136,6 +144,7 @@ def _ensure_pending_registration_table() -> None:
                 name VARCHAR(120) NOT NULL,
                 email VARCHAR(255) NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
+                role VARCHAR(20) NOT NULL DEFAULT 'student',
                 otp_hash VARCHAR(255) NOT NULL,
                 otp_expiry DATETIME NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -147,18 +156,42 @@ def _ensure_pending_registration_table() -> None:
         )
     )
 
+    role_column_exists = db.session.execute(
+        text(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'pending_registrations'
+              AND column_name = 'role'
+            LIMIT 1
+            """
+        )
+    ).first()
 
-def _store_pending_registration(name: str, email: str, password_hash: str, otp_code: str) -> None:
+    if not role_column_exists:
+        db.session.execute(
+            text(
+                """
+                ALTER TABLE pending_registrations
+                ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'student' AFTER password_hash
+                """
+            )
+        )
+
+
+def _store_pending_registration(name: str, email: str, password_hash: str, otp_code: str, role: str) -> None:
     otp_hash = _hash_password(otp_code)
     otp_expiry = datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES)
     db.session.execute(
         text(
             """
-            INSERT INTO pending_registrations (name, email, password_hash, otp_hash, otp_expiry)
-            VALUES (:name, :email, :password_hash, :otp_hash, :otp_expiry)
+            INSERT INTO pending_registrations (name, email, password_hash, role, otp_hash, otp_expiry)
+            VALUES (:name, :email, :password_hash, :role, :otp_hash, :otp_expiry)
             ON DUPLICATE KEY UPDATE
                 name = VALUES(name),
                 password_hash = VALUES(password_hash),
+                role = VALUES(role),
                 otp_hash = VALUES(otp_hash),
                 otp_expiry = VALUES(otp_expiry)
             """
@@ -167,6 +200,7 @@ def _store_pending_registration(name: str, email: str, password_hash: str, otp_c
             "name": name,
             "email": email,
             "password_hash": password_hash,
+            "role": role,
             "otp_hash": otp_hash,
             "otp_expiry": otp_expiry,
         },
@@ -177,7 +211,7 @@ def _fetch_pending_registration(email: str):
     return db.session.execute(
         text(
             """
-            SELECT id, name, email, password_hash, otp_hash, otp_expiry
+            SELECT id, name, email, password_hash, role, otp_hash, otp_expiry
             FROM pending_registrations
             WHERE email = :email
             LIMIT 1
@@ -416,6 +450,7 @@ def register():
         name = data["name"].strip()
         email = data["email"].strip().lower()
         password = data["password"]
+        role = _normalize_signup_role(data.get("role"))
 
         if not name or not email or not password:
             return jsonify({"success": False, "error": "Invalid input"}), 400
@@ -436,6 +471,7 @@ def register():
             email=email,
             password_hash=password_hash,
             otp_code=otp_code,
+            role=role,
         )
         _log_local_otp(email, otp_code, "register")
         otp_text_body, otp_html_body = _build_otp_email_content(otp_code)
@@ -513,6 +549,7 @@ def verify_otp():
             user = existing_user
             user.name = pending_row["name"]
             user.password_hash = pending_row["password_hash"]
+            user.role = _normalize_signup_role(pending_row.get("role"))
             user.is_verified = True
             user.otp_code = None
             user.otp_expiry = None
@@ -522,7 +559,7 @@ def verify_otp():
                 name=pending_row["name"],
                 email=pending_row["email"],
                 password_hash=pending_row["password_hash"],
-                role="student",
+                role=_normalize_signup_role(pending_row.get("role")),
                 is_approved=True,
                 is_verified=True,
                 otp_code=None,
