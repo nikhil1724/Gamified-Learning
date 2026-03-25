@@ -22,6 +22,7 @@ const ForgotPassword = () => {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [otpPreview, setOtpPreview] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,9 @@ const ForgotPassword = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
     setApiError("");
+    if (name === "email") {
+      setOtpPreview("");
+    }
   };
 
   const validateRequest = () => {
@@ -82,6 +86,7 @@ const ForgotPassword = () => {
     event.preventDefault();
     setApiError("");
     setSuccessMessage("");
+    setOtpPreview("");
 
     if (!validateRequest()) {
       return;
@@ -90,9 +95,14 @@ const ForgotPassword = () => {
     try {
       setIsSubmitting(true);
       const response = await requestPasswordReset({ email: formData.email.trim() });
+      const preview = String(response?.data?.otp_preview || "").trim();
       setSuccessMessage(
         response?.data?.message || "If the account exists, a reset code has been sent to your email."
       );
+      if (/^\d{6}$/.test(preview)) {
+        setOtpPreview(preview);
+        setFormData((prev) => ({ ...prev, token: preview }));
+      }
       setStep("reset");
     } catch (error) {
       setApiError(getApiErrorMessage(error, "Could not send reset code."));
@@ -205,6 +215,12 @@ const ForgotPassword = () => {
               </div>
             ) : null}
 
+            {step === "reset" && otpPreview ? (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                Local test mode: your reset code is <span className="font-semibold tracking-wider">{otpPreview}</span>
+              </div>
+            ) : null}
+
             <button
               type="submit"
               disabled={isSubmitting}
@@ -229,6 +245,7 @@ const ForgotPassword = () => {
                   setStep("request");
                   setApiError("");
                   setSuccessMessage("");
+                  setOtpPreview("");
                   setErrors({});
                 }}
                 className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
