@@ -1,164 +1,91 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../context/AuthContext";
+import AuthField from "../components/auth/AuthField";
 import PageTransition from "../components/PageTransition";
+import { useAuth } from "../context/AuthContext";
 import { getApiErrorMessage } from "../services/api";
-import { googleLoginUser, loginUser } from "../services/authApi";
-import "./Login.css";
+import { loginUser } from "../services/authApi";
 
-const GOOGLE_CLIENT_ID = (process.env.REACT_APP_GOOGLE_CLIENT_ID || "").trim();
+const getLoginRedirectPath = (role) => {
+  if (role === "teacher") {
+    return "/teacher-dashboard";
+  }
+  if (role === "admin") {
+    return "/admin/dashboard";
+  }
+  return "/student-dashboard";
+};
 
 const Login = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login, isAuthenticated, role, isApproved } = useAuth();
+  const { login, isAuthenticated, role } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showWakeMessage, setShowWakeMessage] = useState(false);
-  const googleButtonRef = useRef(null);
-
-  useEffect(() => {
-    if (!isSubmitting) {
-      setShowWakeMessage(false);
-      return undefined;
-    }
-
-    const wakeTimer = window.setTimeout(() => {
-      setShowWakeMessage(true);
-    }, 1800);
-
-    return () => window.clearTimeout(wakeTimer);
-  }, [isSubmitting]);
-
-  const getRoleHome = (userRole, approvalState) => {
-    if (!userRole) {
-      return "/role-select";
-    }
-    if (userRole === "admin") {
-      return "/admin/dashboard";
-    }
-    if (userRole === "teacher" && approvalState === false) {
-      return "/role-select";
-    }
-    return userRole === "teacher" ? "/teacher/dashboard" : "/learn";
-  };
-
-  const expectedRole = useMemo(() => {
-    if (location.pathname.includes("/login/teacher")) {
-      return "teacher";
-    }
-    if (location.pathname.includes("/login/student")) {
-      return "student";
-    }
-    if (location.pathname.includes("/login/admin")) {
-      return "admin";
-    }
-    return null;
-  }, [location.pathname]);
+  const [activePersona, setActivePersona] = useState("student");
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
+      navigate(getLoginRedirectPath(role), { replace: true });
     }
-  }, [isAuthenticated, role, isApproved, navigate]);
-
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !googleButtonRef.current) {
-      return;
-    }
-
-    const googleApi = window.google?.accounts?.id;
-    if (!googleApi) {
-      return;
-    }
-
-    googleApi.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: async (response) => {
-        try {
-          setError("");
-          setIsSubmitting(true);
-          const apiResponse = await googleLoginUser({ credential: response.credential });
-          const { token, user } = apiResponse.data;
-
-          if (expectedRole && user?.role && user.role !== expectedRole) {
-            setError(`This account is registered as a ${user.role}. Use the correct login.`);
-            return;
-          }
-
-          login(token, user);
-          navigate("/dashboard", { replace: true });
-        } catch (err) {
-          setError(getApiErrorMessage(err, "Google login failed."));
-        } finally {
-          setIsSubmitting(false);
-        }
-      },
-    });
-
-    googleButtonRef.current.innerHTML = "";
-    googleApi.renderButton(googleButtonRef.current, {
-      theme: "outline",
-      size: "large",
-      text: "signin_with",
-      shape: "pill",
-      width: 280,
-    });
-  }, [expectedRole, login, navigate]);
+  }, [isAuthenticated, role, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
+    setApiError("");
+  };
+
+  const validateForm = () => {
+    const nextErrors = {};
+
+    if (!formData.email.trim()) {
+      nextErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+
+    if (!formData.password) {
+      nextErrors.password = "Password is required.";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError("");
+    setApiError("");
 
-    if (!formData.email || !formData.password) {
-      setError("Please enter email and password.");
+    if (!validateForm()) {
       return;
     }
 
     try {
       setIsSubmitting(true);
-      console.log("[DEBUG] Login attempt:", {
-        email: formData.email,
-        password: formData.password,
-        emailLength: formData.email?.length,
-        passwordLength: formData.password?.length,
-      });
       const response = await loginUser({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
       });
 
       const { token, user } = response.data;
-      const unlockedBadges = response.data?.unlocked_badges || [];
 
-      if (Array.isArray(unlockedBadges) && unlockedBadges.length) {
-        window.dispatchEvent(
-          new CustomEvent("achievement:unlock", { detail: { badges: unlockedBadges } })
-        );
-      }
-
-      if (expectedRole && user?.role && user.role !== expectedRole) {
-        setError(`This account is registered as a ${user.role}. Use the correct login.`);
-        return;
-      }
-
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
       login(token, user);
-      navigate("/dashboard", { replace: true });
-    } catch (err) {
-      if (err?.response?.data?.requires_otp && err?.response?.data?.email) {
-        navigate(`/verify-otp?email=${encodeURIComponent(err.response.data.email)}`, { replace: true });
+
+      navigate(getLoginRedirectPath(user?.role), { replace: true });
+    } catch (error) {
+      if (error?.response?.data?.requires_otp && error?.response?.data?.email) {
+        navigate(`/verify-otp?email=${encodeURIComponent(error.response.data.email)}`, { replace: true });
         return;
       }
-      const message = getApiErrorMessage(err, "Login failed.");
-      setError(message);
+
+      setApiError(getApiErrorMessage(error, "Invalid email or password."));
     } finally {
       setIsSubmitting(false);
     }
@@ -166,93 +93,126 @@ const Login = () => {
 
   return (
     <PageTransition>
-      <div className="login-page">
-        <div className="login-container">
-          <div className="login-card">
-            <div className="login-header">
-              <h2 className="login-title">Welcome Back</h2>
-              <p className="login-subtitle">Sign in to your account and continue your learning journey</p>
-            </div>
-            <form onSubmit={handleSubmit} className="login-form">
-              <div className="form-group">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  className="form-control"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Email address"
-                  autoComplete="email"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <div className="password-input-wrapper">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    className="form-control"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Password"
-                    autoComplete="current-password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? "👁️‍🗨️" : "👁️"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="forgot-password-link">
-                <a href="#">Forgot your password?</a>
-              </div>
-
-              {error && (
-                <div className="alert alert-danger">
-                  {error}
-                </div>
-              )}
-
-              {showWakeMessage ? (
-                <div className="alert alert-warning" role="alert">
-                  Server waking up, please wait...
-                </div>
-              ) : null}
-
-              <button type="submit" className="btn btn-primary btn-login" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-100 via-indigo-100 to-violet-100 px-4 py-10 sm:px-6">
+        <div className="w-full max-w-[430px] rounded-2xl border border-white/70 bg-white/95 p-6 shadow-2xl shadow-indigo-200/60 backdrop-blur sm:p-8">
+          <div className="mb-6 rounded-xl bg-slate-100 p-1.5">
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => setActivePersona("student")}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                  activePersona === "student"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-white"
+                }`}
+              >
+                Student 👨‍🎓
               </button>
-
-              {GOOGLE_CLIENT_ID ? (
-                <div className="d-flex justify-content-center mt-3">
-                  <div ref={googleButtonRef} />
-                </div>
-              ) : null}
-
-              <div className="auth-footer">
-                <p>
-                  Don&apos;t have an account?{" "}
-                  <Link to="/register">Create account</Link>
-                </p>
-              </div>
-            </form>
+              <button
+                type="button"
+                onClick={() => setActivePersona("teacher")}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                  activePersona === "teacher"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-white"
+                }`}
+              >
+                Teacher 👨‍🏫
+              </button>
+            </div>
           </div>
+
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Welcome Back</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Sign in to your account and continue your learning journey
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <AuthField
+              id="email"
+              name="email"
+              type="email"
+              label="Email"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="email"
+              placeholder="you@example.com"
+              error={errors.email}
+            />
+
+            <AuthField
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              label="Password"
+              value={formData.password}
+              onChange={handleChange}
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              error={errors.password}
+              rightSlot={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M3 3l18 18" />
+                      <path d="M10.58 10.58a2 2 0 102.83 2.83" />
+                      <path d="M9.88 5.09A10.94 10.94 0 0112 5c6 0 10 7 10 7a18.7 18.7 0 01-3.07 3.86" />
+                      <path d="M6.1 6.1A18.48 18.48 0 002 12s4 7 10 7a9.76 9.76 0 004.59-1.08" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              }
+            />
+
+            <div className="text-right">
+              <a
+                href="mailto:support@gamifiedlearning.quest?subject=Password%20Reset%20Request"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                Forgot password?
+              </a>
+            </div>
+
+            {apiError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {apiError}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-300/50 transition duration-200 hover:scale-[1.01] hover:from-blue-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/90 border-r-transparent" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+
+            <p className="text-center text-sm text-slate-600">
+              Don&apos;t have an account?{" "}
+              <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700">
+                Create account
+              </Link>
+            </p>
+          </form>
         </div>
       </div>
     </PageTransition>

@@ -6,10 +6,7 @@ const getRoleHome = (role, isApproved) => {
   if (role === "admin") {
     return "/admin/dashboard";
   }
-  if (!role) {
-    return "/role-select";
-  }
-  return role === "teacher" ? "/teacher/dashboard" : "/learn";
+  return role === "teacher" ? "/teacher-dashboard" : "/student-dashboard";
 };
 
 const ProtectedRoute = ({ children, allowedRoles, role: requiredRole }) => {
@@ -29,11 +26,11 @@ const ProtectedRoute = ({ children, allowedRoles, role: requiredRole }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/role-select" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (effectiveAllowedRoles.length && !role) {
-    return <Navigate to="/role-select" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (effectiveAllowedRoles.length && !effectiveAllowedRoles.includes(role)) {
@@ -43,7 +40,7 @@ const ProtectedRoute = ({ children, allowedRoles, role: requiredRole }) => {
   // Teachers can access their dashboard even if pending approval
   // Only block students/others who shouldn't be there
   if (role === "teacher" && isApproved === false && !effectiveAllowedRoles.includes("teacher")) {
-    return <Navigate to="/role-select" replace />;
+    return <Navigate to="/teacher-dashboard" replace />;
   }
 
   return children;
@@ -53,5 +50,5 @@ export default ProtectedRoute;
 
 // getTeacherHome function (fallback redirect mapping for manual navigation)
 export const getTeacherHome = () => {
-  return "/teacher/dashboard";
+  return "/teacher-dashboard";
 };

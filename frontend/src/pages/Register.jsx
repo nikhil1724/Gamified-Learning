@@ -1,17 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
+import AuthField from "../components/auth/AuthField";
+import PageTransition from "../components/PageTransition";
 import { useAuth } from "../context/AuthContext";
-import AuthLayout from "../components/AuthLayout";
 import { getApiErrorMessage } from "../services/api";
 import { registerUser } from "../services/authApi";
-import "./Register.css";
 
 const Register = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { isAuthenticated, role, isApproved } = useAuth();
-  const isTeacherRegister = location.pathname.includes("/register/teacher");
+  const { isAuthenticated, role } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -19,279 +17,214 @@ const Register = () => {
     confirmPassword: "",
     role: "student",
   });
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [showWakeMessage, setShowWakeMessage] = useState(false);
 
   useEffect(() => {
-    if (!isSubmitting) {
-      setShowWakeMessage(false);
-      return undefined;
+    if (isAuthenticated) {
+      navigate(role === "teacher" ? "/teacher-dashboard" : "/student-dashboard", { replace: true });
     }
-
-    const wakeTimer = window.setTimeout(() => {
-      setShowWakeMessage(true);
-    }, 1800);
-
-    return () => window.clearTimeout(wakeTimer);
-  }, [isSubmitting]);
-
-  useEffect(() => {
-    if (isTeacherRegister && isAuthenticated) {
-      const redirectTo = !role
-        ? "/role-select"
-        : role === "teacher" && isApproved === false
-        ? "/role-select"
-        : role === "teacher"
-        ? "/teacher/dashboard"
-        : "/learn";
-      navigate(redirectTo, { replace: true });
-    }
-  }, [isTeacherRegister, isAuthenticated, role, isApproved, navigate]);
+  }, [isAuthenticated, role, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
+    setApiError("");
+    setSuccessMessage("");
+  };
+
+  const validateForm = () => {
+    const nextErrors = {};
+
+    if (!formData.name.trim()) {
+      nextErrors.name = "Full Name is required.";
+    }
+
+    if (!formData.email.trim()) {
+      nextErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+
+    if (!formData.password) {
+      nextErrors.password = "Password is required.";
+    }
+
+    if (!formData.confirmPassword) {
+      nextErrors.confirmPassword = "Confirm Password is required.";
+    } else if (formData.password !== formData.confirmPassword) {
+      nextErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    if (!["student", "teacher"].includes(formData.role)) {
+      nextErrors.role = "Select a valid role.";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError("");
-    setSubmitAttempted(true);
+    setApiError("");
+    setSuccessMessage("");
 
-    if (!formData.name || !formData.email || !formData.password || !formData.role) {
-      setError("Please fill out all fields.");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
+    if (!validateForm()) {
       return;
     }
 
     try {
       setIsSubmitting(true);
       const response = await registerUser({
-        name: formData.name,
-        email: formData.email,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         password: formData.password,
         role: formData.role,
       });
+
+      const message = response?.data?.message || "Registration successful. You can now sign in.";
+      setSuccessMessage(message);
+
       if (response?.data?.requires_otp) {
-        navigate(`/verify-otp?email=${encodeURIComponent(response.data.email || formData.email)}`, {
-          state: {
-            cooldownSeconds: Number(response?.data?.resend_cooldown_seconds || 45),
-            sentAt: response?.data?.sent_at || null,
-          },
-          replace: true,
-        });
+        setTimeout(() => {
+          navigate(`/verify-otp?email=${encodeURIComponent(response.data.email || formData.email.trim())}`, {
+            state: {
+              cooldownSeconds: Number(response?.data?.resend_cooldown_seconds || 45),
+              sentAt: response?.data?.sent_at || null,
+            },
+            replace: true,
+          });
+        }, 1200);
         return;
       }
 
-      navigate("/login/student", { replace: true });
-    } catch (err) {
-      const message = getApiErrorMessage(err, "Registration failed.");
-      setError(message);
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        role: "student",
+      });
+    } catch (error) {
+      setApiError(getApiErrorMessage(error, "Registration failed."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const passwordStrength = useMemo(() => {
-    const value = formData.password;
-    if (!value) {
-      return { label: "", score: 0 };
-    }
-
-    let score = 0;
-    if (value.length >= 8) score += 1;
-    if (/[A-Z]/.test(value)) score += 1;
-    if (/[0-9]/.test(value)) score += 1;
-    if (/[^A-Za-z0-9]/.test(value)) score += 1;
-
-    if (score <= 1) {
-      return { label: "Weak", score, color: "bg-danger" };
-    }
-
-    if (score <= 3) {
-      return { label: "Medium", score, color: "bg-warning" };
-    }
-
-    return { label: "Strong", score, color: "bg-success" };
-  }, [formData.password]);
-
-  const inlineErrors = useMemo(
-    () => ({
-      name: submitAttempted && !formData.name ? "Full name is required." : "",
-      email: submitAttempted && !formData.email ? "Email is required." : "",
-      password: submitAttempted && !formData.password ? "Password is required." : "",
-      confirmPassword:
-        submitAttempted && !formData.confirmPassword
-          ? "Please confirm your password."
-          : formData.confirmPassword && formData.password !== formData.confirmPassword
-          ? "Passwords do not match."
-          : "",
-      role: submitAttempted && !formData.role ? "Please select a role." : "",
-    }),
-    [formData, submitAttempted]
-  );
-
   return (
-    <AuthLayout
-      title="Create Your Account"
-      subtitle="Join thousands of focused learners and start mastering new skills"
-    >
-      <>
-      <form onSubmit={handleSubmit} className="register-form">
-        <div className="form-group">
-          <label htmlFor="name" className="form-label">
-            Full Name
-          </label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            className="form-control"
-            placeholder="John Doe"
-            value={formData.name}
-            onChange={handleChange}
-            autoComplete="name"
-            required
-          />
-          {inlineErrors.name ? (
-            <div className="text-danger small mt-1">{inlineErrors.name}</div>
-          ) : null}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="email" className="form-label">
-            Email Address
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            className="form-control"
-            placeholder="you@example.com"
-            value={formData.email}
-            onChange={handleChange}
-            autoComplete="email"
-            required
-          />
-          {inlineErrors.email ? (
-            <div className="text-danger small mt-1">{inlineErrors.email}</div>
-          ) : null}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="password" className="form-label">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            className="form-control"
-            placeholder="••••••••"
-            value={formData.password}
-            onChange={handleChange}
-            autoComplete="new-password"
-            required
-          />
-          {inlineErrors.password ? (
-            <div className="text-danger small mt-1">{inlineErrors.password}</div>
-          ) : null}
-        </div>
-
-        {formData.password ? (
-          <div className="password-strength mb-3">
-            <div className="d-flex justify-content-between small text-muted mb-1">
-              <span>Strength</span>
-              <span>{passwordStrength.label}</span>
-            </div>
-            <div className="progress" style={{ height: "6px" }}>
-              <div
-                className={`progress-bar ${passwordStrength.color || "bg-secondary"}`}
-                role="progressbar"
-                style={{ width: `${(passwordStrength.score / 4) * 100}%` }}
-                aria-valuenow={passwordStrength.score}
-                aria-valuemin="0"
-                aria-valuemax="4"
-              />
-            </div>
+    <PageTransition>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-100 via-indigo-100 to-violet-100 px-4 py-10 sm:px-6">
+        <div className="w-full max-w-[430px] rounded-2xl border border-white/70 bg-white/95 p-6 shadow-2xl shadow-indigo-200/60 backdrop-blur sm:p-8">
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Create Your Account</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Join as a student or teacher and start your learning journey
+            </p>
           </div>
-        ) : null}
 
-        <div className="form-group">
-          <label htmlFor="confirmPassword" className="form-label">
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            className="form-control"
-            placeholder="••••••••"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            autoComplete="new-password"
-            required
-          />
-          {inlineErrors.confirmPassword ? (
-            <div className="text-danger small mt-1">
-              {inlineErrors.confirmPassword}
-            </div>
-          ) : null}
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <AuthField
+              id="name"
+              name="name"
+              label="Full Name"
+              value={formData.name}
+              onChange={handleChange}
+              autoComplete="name"
+              placeholder="John Doe"
+              error={errors.name}
+            />
+
+            <AuthField
+              id="email"
+              name="email"
+              type="email"
+              label="Email"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="email"
+              placeholder="you@example.com"
+              error={errors.email}
+            />
+
+            <AuthField
+              id="password"
+              name="password"
+              type="password"
+              label="Password"
+              value={formData.password}
+              onChange={handleChange}
+              autoComplete="new-password"
+              placeholder="Create a password"
+              error={errors.password}
+            />
+
+            <AuthField
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              label="Confirm Password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              autoComplete="new-password"
+              placeholder="Confirm your password"
+              error={errors.confirmPassword}
+            />
+
+            <AuthField
+              as="select"
+              id="role"
+              name="role"
+              label="Role"
+              value={formData.role}
+              onChange={handleChange}
+              options={[
+                { value: "student", label: "Student" },
+                { value: "teacher", label: "Teacher" },
+              ]}
+              error={errors.role}
+            />
+
+            {apiError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {apiError}
+              </div>
+            ) : null}
+
+            {successMessage ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {successMessage}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-300/50 transition duration-200 hover:scale-[1.01] hover:from-blue-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/90 border-r-transparent" />
+                  Creating account...
+                </>
+              ) : (
+                "Create Account"
+              )}
+            </button>
+          </form>
+
+          <p className="mt-4 text-center text-sm text-slate-600">
+            Already have an account?{" "}
+            <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700">
+              Sign In
+            </Link>
+          </p>
         </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="role">
-            Select Role
-          </label>
-          <select
-            id="role"
-            name="role"
-            className="form-control"
-            value={formData.role}
-            onChange={handleChange}
-            required
-          >
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-          </select>
-
-          {inlineErrors.role ? (
-            <div className="text-danger small mt-1">{inlineErrors.role}</div>
-          ) : null}
-        </div>
-
-        {error ? (
-          <div className="alert alert-danger mb-3" role="alert">
-            {error}
-          </div>
-        ) : null}
-
-        {showWakeMessage ? (
-          <div className="alert alert-warning mb-3" role="alert">
-            Server waking up, please wait...
-          </div>
-        ) : null}
-
-        <button
-          type="submit"
-          className="btn btn-primary btn-register w-100"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Creating account..." : "Create Account"}
-        </button>
-      </form>
-
-      <p className="auth-footer mt-4 text-center">
-        Already have an account? <Link to="/login" className="fw-semibold">Sign In</Link>
-      </p>
-      </>
-    </AuthLayout>
+      </div>
+    </PageTransition>
   );
 };
 

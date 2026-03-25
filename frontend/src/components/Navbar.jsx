@@ -212,7 +212,7 @@ const Navbar = () => {
                 </li>
               </ul>
               <div className="navbar-actions">
-                <Link to="/role-select" className="btn btn-outline-primary btn-sm me-2 navbar-login-btn" onClick={closeMenu}>
+                <Link to="/login" className="btn btn-outline-primary btn-sm me-2 navbar-login-btn" onClick={closeMenu}>
                   Login
                 </Link>
                 <Link to="/register" className="btn btn-primary btn-sm navbar-register-btn" onClick={closeMenu}>

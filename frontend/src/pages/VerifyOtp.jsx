@@ -80,7 +80,7 @@ const VerifyOtp = () => {
       setIsSubmitting(true);
       await verifyRegistrationOtp({ email, otp });
       setInfo("OTP verified successfully.");
-      navigate("/login/student", { replace: true });
+      navigate("/login", { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err, "OTP verification failed."));
     } finally {

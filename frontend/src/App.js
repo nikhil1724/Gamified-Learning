@@ -9,15 +9,12 @@ import { useAuth } from "./context/AuthContext";
 import SplashScreen from "./components/SplashScreen";
 import AchievementToastHost from "./components/AchievementToastHost";
 import "./styles/layout.css";
-import Dashboard from "./pages/Dashboard";
-import Home from "./pages/Home";
 import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
 import Quiz from "./pages/Quiz";
 import Register from "./pages/Register";
 import VerifyOtp from "./pages/VerifyOtp";
 import Rewards from "./pages/Rewards";
-import RoleSelect from "./pages/RoleSelect";
 import SkillTree from "./pages/SkillTree";
 import TeacherCourses from "./pages/TeacherCourses";
 import StudentCourses from "./pages/StudentCourses";
@@ -45,14 +42,11 @@ const StudentDashboard = lazy(() => import("./pages/StudentDashboard"));
 const InstructorDashboard = lazy(() => import("./pages/InstructorDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
-const getRoleHome = (role, isApproved) => {
+const getRoleHome = (role) => {
   if (role === "admin") {
     return "/admin/dashboard";
   }
-  if (!role) {
-    return "/role-select";
-  }
-  return role === "teacher" ? "/teacher/dashboard" : "/learn";
+  return role === "teacher" ? "/teacher-dashboard" : "/student-dashboard";
 };
 
 const getPageTitle = (pathname) => {
@@ -75,7 +69,7 @@ const getPageTitle = (pathname) => {
   return "Gamified Learning Platform";
 };
 
-const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
+const AppRoutes = ({ isAuthenticated, role }) => {
   const location = useLocation();
   const [showLoader, setShowLoader] = useState(false);
 
@@ -99,36 +93,28 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
           path="/"
           element={
             isAuthenticated ? (
-              <Navigate to={getRoleHome(role, isApproved)} replace />
+              <Navigate to={getRoleHome(role)} replace />
             ) : (
-              <Home />
-            )
-          }
-        />
-        <Route
-          path="/role-select"
-          element={
-            isAuthenticated && role ? (
-              <Navigate to={getRoleHome(role, isApproved)} replace />
-            ) : (
-              <RoleSelect />
+              <Login />
             )
           }
         />
         <Route path="/login" element={<Login />} />
-        <Route path="/login/student" element={<Login />} />
-        <Route path="/login/teacher" element={<Login />} />
-        <Route path="/login/admin" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/register/teacher" element={<Register />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route
           path="/home"
-          element={<Navigate to={getRoleHome(role, isApproved)} replace />}
+          element={
+            isAuthenticated ? (
+              <Navigate to={getRoleHome(role)} replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
         <Route
           path="/dashboard"
-          element={<Navigate to={getRoleHome(role, isApproved)} replace />}
+          element={<Navigate to={getRoleHome(role)} replace />}
         />
         <Route
           path="/learn"
@@ -147,13 +133,14 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
           }
         />
         <Route
-          path="/student/dashboard"
+          path="/student-dashboard"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
               <StudentDashboard />
             </ProtectedRoute>
           }
         />
+        <Route path="/student/dashboard" element={<Navigate to="/student-dashboard" replace />} />
         <Route
           path="/course/:course/lessons"
           element={
@@ -243,13 +230,14 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
           }
         />
         <Route
-          path="/teacher/dashboard"
+          path="/teacher-dashboard"
           element={
             <ProtectedRoute allowedRoles={["teacher"]}>
               <InstructorDashboard />
             </ProtectedRoute>
           }
         />
+        <Route path="/teacher/dashboard" element={<Navigate to="/teacher-dashboard" replace />} />
         <Route
           path="/teacher/courses"
           element={
@@ -362,7 +350,7 @@ const AppRoutes = ({ isAuthenticated, role, isApproved }) => {
 };
 
 const App = () => {
-  const { isAuthenticated, authLoading, role, isApproved } = useAuth();
+  const { isAuthenticated, authLoading, role } = useAuth();
 
   if (authLoading) {
     return <SplashScreen />;
@@ -381,7 +369,6 @@ const App = () => {
           <AppRoutes
             isAuthenticated={isAuthenticated}
             role={role}
-            isApproved={isApproved}
           />
         </main>
         <Footer />
