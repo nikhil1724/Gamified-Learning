@@ -9,6 +9,7 @@ import { useAuth } from "./context/AuthContext";
 import SplashScreen from "./components/SplashScreen";
 import AchievementToastHost from "./components/AchievementToastHost";
 import "./styles/layout.css";
+import Home from "./pages/Home";
 import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
 import Quiz from "./pages/Quiz";
@@ -95,7 +96,7 @@ const AppRoutes = ({ isAuthenticated, role }) => {
             isAuthenticated ? (
               <Navigate to={getRoleHome(role)} replace />
             ) : (
-              <Login />
+              <Home />
             )
           }
         />
@@ -108,7 +109,7 @@ const AppRoutes = ({ isAuthenticated, role }) => {
             isAuthenticated ? (
               <Navigate to={getRoleHome(role)} replace />
             ) : (
-              <Navigate to="/login" replace />
+              <Home />
             )
           }
         />
