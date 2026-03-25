@@ -5,6 +5,7 @@ import sys
 import tempfile
 import time
 from datetime import datetime, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -370,34 +371,47 @@ def submit_code():
         elif any((result.get("error") or "").startswith("Runtime Error") for result in results):
             status = "Runtime Error"
 
-    submission = CodeSubmission(
-        user_id=user.id,
-        problem_id=problem.id,
-        language=ALLOWED_LANGUAGE,
-        code=code,
-        status=status,
-        runtime_ms=runtime_ms,
-        passed_count=passed_count,
-        total_count=total_count,
-    )
-    db.session.add(submission)
-    db.session.flush()
+    submission_id = None
+    persistence_warning = None
 
-    _upsert_progress(user.id, problem.id, all_passed, runtime_ms, submission.id)
+    try:
+        submission = CodeSubmission(
+            user_id=user.id,
+            problem_id=problem.id,
+            language=ALLOWED_LANGUAGE,
+            code=code,
+            status=status,
+            runtime_ms=runtime_ms,
+            passed_count=passed_count,
+            total_count=total_count,
+        )
+        db.session.add(submission)
+        db.session.flush()
+        submission_id = submission.id
 
-    if all_passed:
-        user.xp_points += DIFFICULTY_XP.get(problem.difficulty, 10)
-        _update_coding_stats(user, solved=True, solved_at=datetime.utcnow())
+        _upsert_progress(user.id, problem.id, all_passed, runtime_ms, submission.id)
 
-    db.session.commit()
+        if all_passed:
+            user.xp_points += DIFFICULTY_XP.get(problem.difficulty, 10)
+            _update_coding_stats(user, solved=True, solved_at=datetime.utcnow())
+
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        # Return execution outcome even when persistence fails (e.g., schema drift in prod).
+        persistence_warning = "Submission evaluated, but progress could not be saved right now."
 
     data = {
-        "submission_id": submission.id,
-        "status": submission.status,
-        "runtime_ms": submission.runtime_ms,
-        "passed_count": submission.passed_count,
-        "total_count": submission.total_count,
+        "submission_id": submission_id,
+        "status": status,
+        "runtime_ms": runtime_ms,
+        "passed_count": passed_count,
+        "total_count": total_count,
+        "results": results,
     }
+    if persistence_warning:
+        data["warning"] = persistence_warning
+
     return jsonify({"success": True, "data": data})
 
 

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 
 import api from "../services/api";
+import { getApiErrorMessage } from "../services/api";
 import PageTransition from "../components/PageTransition";
 import { useTheme } from "../context/ThemeContext";
 import "./ProblemDetail.css";
@@ -29,6 +30,9 @@ const ProblemDetail = () => {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+  const [showWakeMessage, setShowWakeMessage] = useState(false);
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     const fetchProblem = async () => {
@@ -38,7 +42,7 @@ const ProblemDetail = () => {
         const response = await api.get(`/problem/${problemId}`);
         setProblem(response.data?.data || null);
       } catch (err) {
-        setError(err?.response?.data?.error || "Failed to load problem.");
+        setError(getApiErrorMessage(err, "Failed to load problem."));
       } finally {
         setLoading(false);
       }
@@ -46,6 +50,19 @@ const ProblemDetail = () => {
 
     fetchProblem();
   }, [problemId]);
+
+  useEffect(() => {
+    if (!running) {
+      setShowWakeMessage(false);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowWakeMessage(true);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [running]);
 
   const editorTheme = useMemo(() => {
     if (theme === "dark" || theme === "neon") {
@@ -62,10 +79,17 @@ const ProblemDetail = () => {
     try {
       setRunning(true);
       setError("");
-      const response = await api.post("/run", {
-        problem_id: problem.id,
-        code,
-      });
+      setActionMessage("");
+      const response = await api.post(
+        "/run",
+        {
+          problem_id: problem.id,
+          code,
+        },
+        {
+          timeout: 120000,
+        }
+      );
       const data = response.data?.data;
       setResults(data?.results || []);
       setSummary({
@@ -74,8 +98,10 @@ const ProblemDetail = () => {
         runtime_ms: data?.runtime_ms || 0,
         status: "Run Complete",
       });
+      setActionMessage("Run completed. See test results below.");
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
-      setError(err?.response?.data?.error || "Failed to run code.");
+      setError(getApiErrorMessage(err, "Failed to run code."));
     } finally {
       setRunning(false);
     }
@@ -89,20 +115,30 @@ const ProblemDetail = () => {
     try {
       setRunning(true);
       setError("");
-      const response = await api.post("/submit", {
-        problem_id: problem.id,
-        code,
-        language: "python",
-      });
+      setActionMessage("");
+      const response = await api.post(
+        "/submit",
+        {
+          problem_id: problem.id,
+          code,
+          language: "python",
+        },
+        {
+          timeout: 120000,
+        }
+      );
       const data = response.data?.data;
+      setResults(data?.results || []);
       setSummary({
         passed_count: data?.passed_count || 0,
         total_count: data?.total_count || 0,
         runtime_ms: data?.runtime_ms || 0,
         status: data?.status || "Submitted",
       });
+      setActionMessage("Submission completed. See evaluation below.");
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
-      setError(err?.response?.data?.error || "Failed to submit code.");
+      setError(getApiErrorMessage(err, "Failed to submit code."));
     } finally {
       setRunning(false);
     }
@@ -144,6 +180,14 @@ const ProblemDetail = () => {
                   </button>
                 </div>
               </div>
+
+              {running && showWakeMessage ? (
+                <div className="alert alert-info" role="alert">
+                  Code runner is warming up. This can take a bit on first run.
+                </div>
+              ) : null}
+
+              {actionMessage ? <div className="alert alert-success">{actionMessage}</div> : null}
 
               <div className="problem-detail-grid">
                 <section className="problem-description">
@@ -196,7 +240,7 @@ const ProblemDetail = () => {
                 </section>
               </div>
 
-              <section className="problem-results">
+              <section className="problem-results" ref={resultsRef}>
                 <div className="problem-results__header">
                   <h5 className="mb-0">Test Results</h5>
                   {summary ? (

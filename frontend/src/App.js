@@ -16,7 +16,6 @@ import Quiz from "./pages/Quiz";
 import Register from "./pages/Register";
 import VerifyOtp from "./pages/VerifyOtp";
 import Rewards from "./pages/Rewards";
-import SkillTree from "./pages/SkillTree";
 import TeacherCourses from "./pages/TeacherCourses";
 import StudentCourses from "./pages/StudentCourses";
 import CourseContent from "./pages/CourseContent";
@@ -303,14 +302,7 @@ const AppRoutes = ({ isAuthenticated, role }) => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/skills"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <SkillTree />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/skills" element={<Navigate to="/learn" replace />} />
         <Route
           path="/rewards"
           element={

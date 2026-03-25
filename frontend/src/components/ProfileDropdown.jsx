@@ -23,7 +23,6 @@ const ProfileDropdown = ({ user, role, onLogout }) => {
     if (role === "student") {
       return [
         { label: "Quiz", path: "/quiz" },
-        { label: "Skill Tree", path: "/skills" },
         { label: "Leaderboard", path: "/leaderboard" },
         { label: "Rewards", path: "/rewards" },
       ];
