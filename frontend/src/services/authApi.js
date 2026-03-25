@@ -19,11 +19,17 @@ export const loginUser = (payload) => postAuth("/login", payload);
 
 export const googleLoginUser = (payload) => postAuth("/auth/google-login", payload);
 
+export const requestPasswordReset = (payload) => postAuth("/auth/forgot-password", payload);
+
+export const confirmPasswordReset = (payload) => postAuth("/auth/reset-password", payload);
+
 export default {
   registerUser,
   verifyRegistrationOtp,
   resendRegistrationOtp,
   loginUser,
   googleLoginUser,
+  requestPasswordReset,
+  confirmPasswordReset,
   authenticated: api,
 };

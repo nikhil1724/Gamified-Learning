@@ -177,12 +177,9 @@ const Login = () => {
             />
 
             <div className="text-right">
-              <a
-                href="mailto:support@gamifiedlearning.quest?subject=Password%20Reset%20Request"
-                className="text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
+              <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             {apiError ? (

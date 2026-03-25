@@ -12,6 +12,7 @@ import "./styles/layout.css";
 import Home from "./pages/Home";
 import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import Quiz from "./pages/Quiz";
 import Register from "./pages/Register";
 import VerifyOtp from "./pages/VerifyOtp";
@@ -66,6 +67,10 @@ const getPageTitle = (pathname) => {
     return "Verify OTP | Gamified Learning";
   }
 
+  if (pathname.startsWith("/forgot-password")) {
+    return "Reset Password | Gamified Learning";
+  }
+
   return "Gamified Learning Platform";
 };
 
@@ -100,6 +105,7 @@ const AppRoutes = ({ isAuthenticated, role }) => {
           }
         />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route

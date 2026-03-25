@@ -29,6 +29,7 @@ OTP_RESEND_WINDOW_SECONDS = 600
 OTP_RESEND_MAX_ATTEMPTS = 3
 OTP_RESEND_COOLDOWN_SECONDS = 45
 OTP_EMAIL_SUBJECT = "Your OTP Code - Gamified Learning"
+PASSWORD_RESET_EXPIRY_MINUTES = 15
 _otp_resend_lock = threading.Lock()
 _otp_resend_attempts = {}
 
@@ -178,6 +179,96 @@ def _ensure_pending_registration_table() -> None:
                 """
             )
         )
+
+
+def _ensure_password_reset_table() -> None:
+    db.session.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                email VARCHAR(255) NOT NULL,
+                token_hash VARCHAR(255) NOT NULL,
+                token_expiry DATETIME NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_password_resets_email (email),
+                INDEX idx_password_resets_expiry (token_expiry)
+            ) ENGINE=InnoDB
+            """
+        )
+    )
+
+
+def _store_password_reset_token(email: str, token: str) -> None:
+    token_hash = _hash_password(token)
+    token_expiry = datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_EXPIRY_MINUTES)
+    db.session.execute(
+        text(
+            """
+            INSERT INTO password_resets (email, token_hash, token_expiry)
+            VALUES (:email, :token_hash, :token_expiry)
+            ON DUPLICATE KEY UPDATE
+                token_hash = VALUES(token_hash),
+                token_expiry = VALUES(token_expiry)
+            """
+        ),
+        {
+            "email": email,
+            "token_hash": token_hash,
+            "token_expiry": token_expiry,
+        },
+    )
+
+
+def _fetch_password_reset(email: str):
+    return db.session.execute(
+        text(
+            """
+            SELECT id, email, token_hash, token_expiry
+            FROM password_resets
+            WHERE email = :email
+            LIMIT 1
+            """
+        ),
+        {"email": email},
+    ).mappings().first()
+
+
+def _delete_password_reset(email: str) -> None:
+    db.session.execute(
+        text("DELETE FROM password_resets WHERE email = :email"),
+        {"email": email},
+    )
+
+
+def _password_reset_expired(reset_row) -> bool:
+    token_expiry = reset_row.get("token_expiry") if reset_row else None
+    return not token_expiry or token_expiry < datetime.utcnow()
+
+
+def _build_password_reset_email_content(token: str) -> tuple[str, str]:
+    text_body = (
+        "Gamified Learning\n\n"
+        "We received a password reset request for your account.\n"
+        f"Your reset code is: {token}\n"
+        f"This code expires in {PASSWORD_RESET_EXPIRY_MINUTES} minutes.\n\n"
+        "If you did not request this, you can ignore this email.\n"
+        "Support: support@gamifiedlearning.quest"
+    )
+
+    html_body = (
+        "<div style=\"font-family:Arial,Helvetica,sans-serif;color:#111827;line-height:1.5;\">"
+        "<h2 style=\"margin:0 0 8px;\">Gamified Learning</h2>"
+        "<p style=\"margin:0 0 12px;\">Use this code to reset your password:</p>"
+        f"<div style=\"font-size:38px;font-weight:700;letter-spacing:6px;margin:8px 0 12px;\">{token}</div>"
+        f"<p style=\"margin:0 0 10px;\">This code expires in {PASSWORD_RESET_EXPIRY_MINUTES} minutes.</p>"
+        "<p style=\"margin:0 0 10px;\">If this wasn't you, no action is needed.</p>"
+        "<p style=\"margin:0;color:#4b5563;\">Need help? Contact support@gamifiedlearning.quest</p>"
+        "</div>"
+    )
+
+    return text_body, html_body
 
 
 def _store_pending_registration(name: str, email: str, password_hash: str, otp_code: str, role: str) -> None:
@@ -668,6 +759,106 @@ def resend_otp():
         db.session.rollback()
         current_app.logger.exception("Database error during OTP resend: %s", exc)
         return jsonify({"success": False, "error": "Database error", "message": "Failed to resend OTP."}), 500
+
+
+@auth_bp.post("/forgot-password")
+@auth_bp.post("/auth/forgot-password")
+def forgot_password():
+    try:
+        _ensure_password_reset_table()
+        data = request.get_json(silent=True) or {}
+        missing = _missing_fields(data, ["email"])
+        if missing:
+            return jsonify({"success": False, "error": "Missing fields", "fields": missing}), 400
+
+        email = data["email"].strip().lower()
+        if not email:
+            return jsonify({"success": False, "error": "Invalid input"}), 400
+
+        user = User.query.filter_by(email=email).first()
+        if user and user.is_verified:
+            token = _generate_otp()
+            _store_password_reset_token(email, token)
+            _log_local_otp(email, token, "password-reset")
+            reset_text_body, reset_html_body = _build_password_reset_email_content(token)
+            db.session.commit()
+
+            send_email(
+                current_app.config,
+                to_email=email,
+                subject="Reset your password - Gamified Learning",
+                text_body=reset_text_body,
+                html_body=reset_html_body,
+            )
+        else:
+            db.session.commit()
+
+        response_payload = {
+            "success": True,
+            "message": "If that email exists, a reset code has been sent.",
+            "expires_in_minutes": PASSWORD_RESET_EXPIRY_MINUTES,
+        }
+        if user and user.is_verified and _otp_preview_enabled():
+            response_payload["otp_preview"] = token
+
+        return jsonify(response_payload), 200
+    except OperationalError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database unavailable during forgot-password: %s", exc)
+        return jsonify({"success": False, "error": "Database unavailable", "message": "Please try again shortly."}), 503
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database error during forgot-password: %s", exc)
+        return jsonify({"success": False, "error": "Database error", "message": "Failed to process request."}), 500
+
+
+@auth_bp.post("/reset-password")
+@auth_bp.post("/auth/reset-password")
+def reset_password():
+    try:
+        _ensure_password_reset_table()
+        data = request.get_json(silent=True) or {}
+        missing = _missing_fields(data, ["email", "token", "new_password"])
+        if missing:
+            return jsonify({"success": False, "error": "Missing fields", "fields": missing}), 400
+
+        email = data["email"].strip().lower()
+        token = str(data["token"]).strip()
+        new_password = str(data["new_password"])
+
+        if not email or len(token) != 6 or not token.isdigit() or len(new_password) < 8:
+            return jsonify({"success": False, "error": "Invalid input"}), 400
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({"success": False, "error": "Invalid reset request"}), 400
+
+        reset_row = _fetch_password_reset(email)
+        if not reset_row:
+            return jsonify({"success": False, "error": "Reset code not found"}), 404
+
+        if _password_reset_expired(reset_row):
+            _delete_password_reset(email)
+            db.session.commit()
+            return jsonify({"success": False, "error": "Reset code expired"}), 400
+
+        token_ok, _ = _check_password(token, reset_row["token_hash"])
+        if not token_ok:
+            return jsonify({"success": False, "error": "Invalid reset code"}), 400
+
+        user.password_hash = _hash_password(new_password)
+        _delete_password_reset(email)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Password reset successful. Please log in."}), 200
+    except OperationalError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database unavailable during reset-password: %s", exc)
+        return jsonify({"success": False, "error": "Database unavailable", "message": "Please try again shortly."}), 503
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("Database error during reset-password: %s", exc)
+        return jsonify({"success": False, "error": "Database error", "message": "Failed to reset password."}), 500
 
 
 @auth_bp.route("/login", methods=["POST", "OPTIONS"])
