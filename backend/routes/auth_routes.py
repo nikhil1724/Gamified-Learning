@@ -783,13 +783,21 @@ def forgot_password():
             reset_text_body, reset_html_body = _build_password_reset_email_content(token)
             db.session.commit()
 
-            send_email(
+            email_sent = send_email(
                 current_app.config,
                 to_email=email,
                 subject="Reset your password - Gamified Learning",
                 text_body=reset_text_body,
                 html_body=reset_html_body,
             )
+            if not email_sent:
+                return jsonify(
+                    {
+                        "success": False,
+                        "error": "Reset email delivery failed",
+                        "message": "Unable to send reset code right now. Please try again.",
+                    }
+                ), 502
         else:
             db.session.commit()
 
