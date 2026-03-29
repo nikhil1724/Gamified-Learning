@@ -253,11 +253,9 @@ The project includes a comprehensive design system with:
 - Responsive design patterns
 - Animation utilities
 
-See `DESIGN_SYSTEM_USAGE.md` and `DESIGN_SYSTEM_CHEATSHEET.md` for details.
-
 ## 🐛 Debugging
 
-For debugging guidance, see `DEBUG_CHECKLIST.md`.
+Use the scripts under `scripts/` for deployment, contract, and smoke-test validation.
 
 ## ✅ Post-Deploy Check
 
@@ -316,7 +314,6 @@ Optional repository variables for CI target URLs:
 ## 🏗 Production Blueprint
 
 For final-year project delivery artifacts, see:
-- `PROJECT_PRODUCTION_BLUEPRINT.md`
 - `backend/sql/full_platform_schema.sql`
 
 ## 📝 API Documentation
