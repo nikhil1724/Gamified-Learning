@@ -224,9 +224,10 @@ def _store_password_reset_token(email: str, token: str) -> None:
             """
             INSERT INTO password_resets (email, token_hash, token_expiry)
             VALUES (:email, :token_hash, :token_expiry)
-            ON DUPLICATE KEY UPDATE
-                token_hash = VALUES(token_hash),
-                token_expiry = VALUES(token_expiry)
+            ON CONFLICT (email) DO UPDATE
+            SET token_hash = EXCLUDED.token_hash,
+                token_expiry = EXCLUDED.token_expiry,
+                updated_at = CURRENT_TIMESTAMP
             """
         ),
         {
@@ -295,12 +296,13 @@ def _store_pending_registration(name: str, email: str, password_hash: str, otp_c
             """
             INSERT INTO pending_registrations (name, email, password_hash, role, otp_hash, otp_expiry)
             VALUES (:name, :email, :password_hash, :role, :otp_hash, :otp_expiry)
-            ON DUPLICATE KEY UPDATE
-                name = VALUES(name),
-                password_hash = VALUES(password_hash),
-                role = VALUES(role),
-                otp_hash = VALUES(otp_hash),
-                otp_expiry = VALUES(otp_expiry)
+            ON CONFLICT (email) DO UPDATE
+            SET name = EXCLUDED.name,
+                password_hash = EXCLUDED.password_hash,
+                role = EXCLUDED.role,
+                otp_hash = EXCLUDED.otp_hash,
+                otp_expiry = EXCLUDED.otp_expiry,
+                updated_at = CURRENT_TIMESTAMP
             """
         ),
         {
