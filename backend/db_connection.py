@@ -12,6 +12,12 @@ T = TypeVar("T")
 
 def normalize_database_url(url: str) -> str:
     normalized = (url or "").strip()
+    if normalized.startswith("mysql://") or normalized.startswith("mysql+pymysql://"):
+        raise RuntimeError(
+            "Invalid DATABASE_URL for PostgreSQL deployment: MySQL URL detected. "
+            "Set DATABASE_URL to postgresql+psycopg2://..."
+        )
+
     if normalized.startswith("postgres://"):
         normalized = normalized.replace("postgres://", "postgresql+psycopg2://", 1)
     elif normalized.startswith("postgresql://"):
