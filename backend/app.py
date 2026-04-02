@@ -11,7 +11,8 @@ from flask_jwt_extended import JWTManager
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from config import Config
-from database import db, init_db
+from database import check_database_connection, db, init_db, register_db_observability
+from db_connection import get_database_diagnostics
 from routes.auth_routes import auth_bp
 from routes.user_routes import user_bp
 from routes.quiz_routes import quiz_bp
@@ -41,13 +42,24 @@ def create_app() -> Flask:
         os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
     )
     app = Flask(__name__, static_folder=frontend_build, static_url_path="/")
-    # Load configuration (MySQL credentials from environment variables).
+    # Load configuration from environment variables.
     app.config.from_object(Config)
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+
+    diagnostics = get_database_diagnostics()
+    app.logger.info("Environment precedence: process env > .env (dotenv override=False)")
+    app.logger.info(
+        "Database config source=%s scheme=%s host=%s database=%s",
+        diagnostics["source"],
+        diagnostics["scheme"],
+        diagnostics["host"],
+        diagnostics["database"],
+    )
+    app.logger.info("Database URL (masked): %s", diagnostics["masked_url"])
 
     CORS(
         app,
@@ -77,6 +89,13 @@ def create_app() -> Flask:
 
     # Initialize SQLAlchemy with the Flask app.
     init_db(app)
+    register_db_observability(app)
+    if app.config.get("DB_CHECK_ON_STARTUP"):
+        check_database_connection(
+            app,
+            attempts=app.config.get("DB_STARTUP_CHECK_ATTEMPTS", 3),
+            delay_seconds=app.config.get("DB_STARTUP_CHECK_DELAY_SECONDS", 2.0),
+        )
     init_socketio(app)
     jwt = JWTManager(app)
 
@@ -122,8 +141,11 @@ def create_app() -> Flask:
     with app.app_context():
         if app.config.get("RUN_STARTUP_TASKS"):
             # Optional bootstrap for local/dev only.
-            db.create_all()
-            seed_quiz_data()
+            try:
+                db.create_all()
+                seed_quiz_data()
+            except SQLAlchemyError as exc:
+                app.logger.warning("Skipping startup tasks because database is unavailable: %s", exc)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)

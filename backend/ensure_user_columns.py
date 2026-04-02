@@ -5,7 +5,7 @@ This script is idempotent and intended to run during deployment.
 
 from sqlalchemy import inspect, text
 
-from db_connection import create_mysql_engine, run_with_retry
+from db_connection import create_database_engine, run_with_retry
 
 
 def _ensure_columns(engine) -> None:
@@ -39,7 +39,7 @@ def _ensure_columns(engine) -> None:
 
 
 def _ensure_columns_once() -> None:
-    engine = create_mysql_engine()
+    engine = create_database_engine()
     try:
         _ensure_columns(engine)
         print("[ensure_user_columns] completed")

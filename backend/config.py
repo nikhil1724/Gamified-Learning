@@ -1,54 +1,16 @@
 import os
 from datetime import timedelta
-from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
+from db_connection import get_database_config
 
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"), override=False)
 
 
 SENDER_EMAIL = "Gamified Learning <no-reply@gamifiedlearning.quest>"
 
-
-def _normalize_database_url(url: str) -> str:
-    normalized = url.strip()
-    if normalized.startswith("mysql://"):
-        normalized = normalized.replace("mysql://", "mysql+pymysql://", 1)
-
-    parsed = urlsplit(normalized)
-    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    if "charset" not in query:
-        query["charset"] = "utf8mb4"
-
-    normalized = urlunsplit(
-        (parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment)
-    )
-    return normalized
-
-
 def _build_database_uri() -> str:
-    """Prefer DATABASE_URL for deployment platforms; fallback to DB_* vars for local use."""
-    direct_url = os.getenv("DATABASE_URL", "").strip()
-    if direct_url:
-        return _normalize_database_url(direct_url)
-
-    db_user = os.getenv("DB_USER", "").strip()
-    db_password = os.getenv("DB_PASSWORD", "").strip()
-    db_host = os.getenv("DB_HOST", "").strip()
-    db_port = os.getenv("DB_PORT", "").strip()
-    db_name = os.getenv("DB_NAME", "").strip()
-
-    if all([db_user, db_password, db_host, db_port, db_name]):
-        safe_user = quote_plus(db_user)
-        safe_password = quote_plus(db_password)
-        return (
-            "mysql+pymysql://"
-            f"{safe_user}:{safe_password}@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
-        )
-
-    raise RuntimeError(
-        "Missing database config. Set DATABASE_URL or DB_USER/DB_PASSWORD/DB_HOST/DB_PORT/DB_NAME."
-    )
+    return get_database_config()[0]
 
 
 def _parse_cors_origins(value: str):
@@ -104,23 +66,17 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "280")),
-        "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
-        "pool_size": int(os.getenv("DB_POOL_SIZE", "1")),
-        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "0")),
-        "pool_use_lifo": True,
-        "connect_args": {
-            "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "20")),
-            "read_timeout": int(os.getenv("DB_READ_TIMEOUT", "30")),
-            "write_timeout": int(os.getenv("DB_WRITE_TIMEOUT", "30")),
-        },
     }
+    DB_CHECK_ON_STARTUP = os.getenv("DB_CHECK_ON_STARTUP", "true").lower() == "true"
+    DB_STARTUP_CHECK_ATTEMPTS = int(os.getenv("DB_STARTUP_CHECK_ATTEMPTS", "3"))
+    DB_STARTUP_CHECK_DELAY_SECONDS = float(os.getenv("DB_STARTUP_CHECK_DELAY_SECONDS", "2"))
     JSON_SORT_KEYS = False
     CORS_ORIGINS = _parse_cors_origins(os.getenv("CORS_ORIGINS", ""))
     JWT_SECRET_KEY = os.getenv(
         "JWT_SECRET",
         os.getenv(
-        "JWT_SECRET_KEY",
-        "change-this-secret-to-a-long-random-string-at-least-32-bytes",
+            "JWT_SECRET_KEY",
+            "change-this-secret-to-a-long-random-string-at-least-32-bytes",
         ),
     )
     JWT_TOKEN_LOCATION = ["headers"]
@@ -136,7 +92,7 @@ class Config:
         "UPLOAD_DIR",
         os.path.join(os.path.dirname(__file__), "uploads"),
     )
-    
+
     # Disable startup DB mutations in production by default.
     RUN_STARTUP_TASKS = os.getenv("RUN_STARTUP_TASKS", "false").lower() == "true"
 
