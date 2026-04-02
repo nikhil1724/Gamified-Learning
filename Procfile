@@ -1,1 +1,1 @@
-web: python backend/bootstrap_db.py && python backend/ensure_user_columns.py && gunicorn --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker --workers 1 --timeout 120 --graceful-timeout 30 backend.app:app
+web: python backend/bootstrap_db.py && python backend/ensure_user_columns.py && gunicorn --bind 0.0.0.0:$PORT --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker --workers 1 --timeout 120 --graceful-timeout 30 backend.app:app
