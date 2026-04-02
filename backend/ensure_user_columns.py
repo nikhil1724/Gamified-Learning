@@ -3,47 +3,9 @@
 This script is idempotent and intended to run during deployment.
 """
 
-import os
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from sqlalchemy import inspect, text
 
-from sqlalchemy import create_engine, inspect, text
-
-
-def _normalize_database_url(url: str) -> str:
-    normalized = (url or "").strip()
-    if normalized.startswith("mysql://"):
-        normalized = normalized.replace("mysql://", "mysql+pymysql://", 1)
-
-    parsed = urlsplit(normalized)
-    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    if "charset" not in query:
-        query["charset"] = "utf8mb4"
-
-    return urlunsplit(
-        (parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment)
-    )
-
-
-def _get_database_url() -> str:
-    direct_url = os.getenv("DATABASE_URL", "").strip()
-    if direct_url:
-        return _normalize_database_url(direct_url)
-
-    db_user = os.getenv("DB_USER", "").strip()
-    db_password = os.getenv("DB_PASSWORD", "").strip()
-    db_host = os.getenv("DB_HOST", "").strip()
-    db_port = os.getenv("DB_PORT", "").strip()
-    db_name = os.getenv("DB_NAME", "").strip()
-
-    if all([db_user, db_password, db_host, db_port, db_name]):
-        return (
-            f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-            "?charset=utf8mb4"
-        )
-
-    raise RuntimeError(
-        "Missing database config. Set DATABASE_URL or DB_USER/DB_PASSWORD/DB_HOST/DB_PORT/DB_NAME."
-    )
+from db_connection import create_mysql_engine, run_with_retry
 
 
 def _ensure_columns(engine) -> None:
@@ -76,11 +38,18 @@ def _ensure_columns(engine) -> None:
             )
 
 
+def _ensure_columns_once() -> None:
+    engine = create_mysql_engine()
+    try:
+        _ensure_columns(engine)
+        print("[ensure_user_columns] completed")
+    except Exception:
+        engine.dispose()
+        raise
+
+
 def main() -> None:
-    database_url = _get_database_url()
-    engine = create_engine(database_url, pool_pre_ping=True)
-    _ensure_columns(engine)
-    print("[ensure_user_columns] completed")
+    run_with_retry(_ensure_columns_once, "ensure_user_columns")
 
 
 if __name__ == "__main__":
